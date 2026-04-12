@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      color: #000;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── EN-TÊTE ── */
+    .header-repub {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 3px;
+      gap: 6px;
+    }
+    .header-repub .repub-text { font-size: 7pt; line-height: 1.45; flex: 1; }
+    .header-repub .titre-bulletin { text-align: center; flex: 2; }
+    .header-repub .titre-bulletin .label {
+      font-size: 8.5pt;
+      border: 1.5px solid #000;
+      padding: 2px 8px;
+      display: inline-block;
+      margin-bottom: 2px;
+    }
+    .header-repub .titre-bulletin h1 { font-size: 17pt; font-weight: bold; }
+    .header-repub .annee-box {
+      font-size: 8pt;
+      border: 1px solid #000;
+      padding: 3px 6px;
+      text-align: center;
+      flex-shrink: 0;
+      line-height: 1.6;
+    }
+
+    /* ── ÉTABLISSEMENT ── */
+    .bloc-etab {
+      border: 1.5px solid #000;
+      display: flex;
+      align-items: stretch;
+    }
+    .bloc-etab .info-etab {
+      flex: 1;
+      padding: 3px 7px;
+      font-size: 8.5pt;
+      line-height: 1.6;
+    }
+    .bloc-etab .info-etab .etab-nom { font-size: 10pt; font-weight: bold; }
+    .bloc-etab .code-etab {
+      font-size: 8pt;
+      border-left: 1px solid #000;
+      padding: 3px 7px;
+      width: 145px;
+      flex-shrink: 0;
+      line-height: 1.75;
+    }
+
+    /* ── ÉLÈVE ── */
+    .bloc-eleve {
+      border: 1.5px solid #000;
+      border-top: none;
+      display: flex;
+      align-items: stretch;
+      margin-bottom: 3px;
+    }
+    .bloc-eleve .col-gauche {
+      flex: 1; padding: 4px 7px; border-right: 1px solid #000;
+    }
+    .col-gauche .nom { font-size: 12pt; font-weight: bold; line-height: 1.3; }
+    .col-gauche .mat { font-size: 10pt; font-weight: bold; }
+    .col-gauche .cls { font-size: 9pt; margin-top: 2px; }
+    .bloc-eleve .col-centre {
+      width: 175px; flex-shrink: 0; padding: 4px 7px;
+      font-size: 8.5pt; line-height: 1.75; border-right: 1px solid #000;
+    }
+    .bloc-eleve .col-droite {
+      width: 148px; flex-shrink: 0; padding: 4px 7px;
+      font-size: 8.5pt; line-height: 1.75;
+    }
+    .bloc-eleve .photo-box {
+      width: 75px; flex-shrink: 0;
+      border-left: 1px solid #000;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9pt; font-weight: bold;
+    }
+
+    /* ── TABLEAU NOTES ── */
+    table.notes {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 3px;
+      font-size: 8.5pt;
+    }
+    table.notes th, table.notes td {
+      border: 1px solid #000;
+      padding: 2px 3px;
+      vertical-align: middle;
+    }
+    table.notes thead th {
+      font-weight: bold; font-style: italic;
+      text-align: center; background: #fff;
+    }
+    table.notes thead th.left { text-align: left; }
+    table.notes tbody td.mat  { font-weight: bold; }
+    table.notes tbody td.c    { text-align: center; }
+    table.notes tbody td.sm   { font-size: 8pt; }
+    table.notes tfoot td      { font-weight: bold; border: 1px solid #000; padding: 2px 3px; }
+    table.notes tfoot td.c    { text-align: center; }
+
+    /* ── BAS DE PAGE ── */
+    .bas-page {
+      display: flex;
+      border: 1.5px solid #000;
+      font-size: 7.8pt;
+      line-height: 1.6;
+    }
+    .bas-col {
+      flex: 1; padding: 4px 6px;
+      border-right: 1px solid #000;
+    }
+    .bas-col:last-child { border-right: none; }
+    .col-title {
+      font-weight: bold; text-decoration: underline;
+      font-size: 8pt; margin-bottom: 2px;
+    }
+    .check-row { display: flex; align-items: center; gap: 4px; margin: 2px 0; }
+    .cbox {
+      width: 11px; height: 11px;
+      border: 1px solid #000;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 8pt; flex-shrink: 0;
+    }
+    .moy-t { width: 100%; border-collapse: collapse; font-size: 7.8pt; }
+    .moy-t td { padding: 1px 2px; }
+    .moy-t .big { font-size: 13pt; font-weight: bold; line-height: 1; }
+    .moy-t .bold { font-weight: bold; }
+
+    /* ── DÉCISION ── */
+    .decision-bloc {
+      display: flex;
+      border: 1.5px solid #000;
+      border-top: none;
+      min-height: 85px;
+      font-size: 8pt;
+    }
+    .dec-left {
+      flex: 1; border-right: 1px solid #000; padding: 5px 8px;
+    }
+    .dec-left .dec-title {
+      font-weight: bold; font-size: 9pt;
+      text-align: center; margin-bottom: 5px; text-decoration: underline;
+    }
+    .dec-left .dec-val {
+      font-size: 15pt; font-style: italic; text-align: center; line-height: 1.4;
+    }
+    .dec-right { flex: 1; padding: 5px 8px; }
+    .dec-right .sig-title { font-weight: bold; text-align: center; margin-bottom: 3px; }
+
+    /* ── PIED ── */
+    .footer { font-size: 7pt; text-align: center; margin-top: 3px; font-style: italic; }
+    .col-large {
+      width: 130px;
+    }
+
+    .col-small {
+      width: 115px;
+    }
+  </style>
+</head>
+<body>
+
+<%
+  /* ── Helpers ── */
+  var numTrim = trimestre.id_trimestre; // 1, 2 ou 3
+  var estTrimestre1 = (numTrim === 1);
+  var estTrimestre3 = (numTrim === 3);
+
+  /* Date de naissance formatée */
+  var dn = new Date(eleve.dateNaissance);
+  var dateNaissanceStr = ('0'+dn.getDate()).slice(-2) + '/' + ('0'+(dn.getMonth()+1)).slice(-2) + '/' + dn.getFullYear();
+
+  /* Année scolaire dérivée des dates du trimestre */
+  var debut = new Date(trimestre.date_debut);
+  var fin   = new Date(trimestre.date_fin);
+  var anneeScolaire = debut.getFullYear() + ' - ' + fin.getFullYear();
+
+  /* Total coef et total moyenneCoef */
+  var totalCoef = matiere.reduce(function(s,m){ return s + (Number(m.coefficient)||0); }, 0);
+  /* totalMoyenneCoeficient est passé directement */
+
+  /* Enseignant par matière — enseignants est un tableau avec { matiere, enseignant:{nom,prenom} } */
+
+  /* Distinction cochée */
+  function isDistinction(val) {
+    return distinction === val;
+  }
+%>
+
+  <!-- EN-TÊTE REPUBLIQUE -->
+  <div class="header-repub">
+    <div class="repub-text">
+      <strong>REPUBLIQUE DE CÔTE D'IVOIRE</strong><br/>
+      MINISTERE DE L'EDUCATION NATIONALE<br/>
+      ET L'ENSEIGNEMENT TECHNIQUE
+    </div>
+    <div class="titre-bulletin">
+      <div class="label">BULLETIN TRIMESTRIEL DE NOTES</div>
+      <h1><%= trimestre.libelle %></h1>
+    </div>
+    <div class="annee-box">
+      Année scolaire<br/>
+      <strong><%= anneeScolaire %></strong>
+    </div>
+  </div>
+
+  <!-- ÉTABLISSEMENT -->
+  <div class="bloc-etab">
+    <div class="info-etab">
+      Etablissement : <span class="etab-nom"><%= etablissement.nom %></span><br/>
+      Adresse : <strong><%= etablissement.adresse %></strong>
+      &nbsp;&nbsp; Tél : <strong><%= etablissement.phone %></strong>
+      &nbsp;&nbsp; E-mail : <strong><%= etablissement.email %></strong>
+    </div>
+    <div class="code-etab">
+      Code : <strong><%= etablissement.code %></strong><br/>
+      Statut : <strong><%= etablissement.statut %></strong><br/>
+      Directeur : <strong><%= etablissement.directeur %></strong>
+    </div>
+  </div>
+
+  <!-- ÉLÈVE -->
+  <div class="bloc-eleve">
+    <div class="col-gauche">
+      <div class="nom"><%= eleve.nom %> <%= eleve.prenom %></div>
+      <div class="mat">Matricule : <%= eleve.matricule %></div>
+      <div class="cls">Classe : <strong><%= eleve.classe.libelle %></strong></div>
+      <!-- <div class="cls">Bulletin N° <%= rang %></div> -->
+    </div>
+    <div class="col-centre">
+      Genre : <strong><%= eleve.sexe %></strong><br/>
+      Né(e) le <strong><%= dateNaissanceStr %></strong><br/>
+      Lieu de naissance : <strong><%= eleve.lieuNaissance %></strong><br/>
+      Nationalité : <strong><%= eleve.nationalite %></strong>
+    </div>
+    <div class="col-droite">
+      Redoublant : <strong><%= eleve.redoublant %></strong><br/>
+      Boursier : <strong><%= eleve.boursier %></strong><br/>
+      Affecté : <strong><%= eleve.affecte %></strong>
+    </div>      
+    <div class="photo-box">PHOTO</div>
+  </div>
+
+  <!-- TABLEAU DES NOTES -->
+  <table class="notes">
+    <thead>
+      <tr>
+        <th class="left" rowspan="2" style="width:110px;">Disciplines</th>
+        <th rowspan="2" style="width:40px;">Moy./20</th>
+        <th rowspan="2" style="width:28px;">Coef.</th>
+        <th rowspan="2" style="width:42px;">M.Coef.</th>
+        <th rowspan="2" style="width:28px;">Rang</th>
+        <% if (!estTrimestre1) { %>
+        <th rowspan="2" style="width:32px;">M.An</th>
+        <% } %>
+        <th colspan="3">PROFESSEURS</th>
+      </tr>
+      <tr>
+        <th class="<%= estTrimestre1 ? 'col-large' : 'col-small' %>">Nom Prenom</th>
+        <th style="width:95px; font-style:normal;">Appréciations</th>
+        <th style="width:55px; font-style:normal;">Signatures</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% matiere.forEach(function(m, index) {
+          var moy   = (m.moyenne !== null && m.moyenne !== undefined) ? Number(m.moyenne).toFixed(2) : '';
+          var mcoef = (m.moyenne !== null && m.moyenne !== undefined) ? (Number(m.moyenne) * Number(m.coefficient)).toFixed(2) : '';
+      %>
+      <tr>
+        <td class="mat"><%= m.matiere %></td>
+        <td class="c"><%= moy %></td>
+        <td class="c"><%= m.coefficient %></td>
+        <td class="c"><%= mcoef %></td>
+        <td class="c"><%= rangMatiere[index].rang  %></td>
+        <% if (!estTrimestre1) { %>
+        <td class="c"></td>
+        <% } %>
+        <td class="sm"><%= m.professeur %></td>
+        <td class="sm"><%= m.appreciation || '' %></td>
+        <td></td>
+      </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td class="c"><%= totalCoef %></td>
+        <td class="c"><%= Number(totalMoyenneCoeficient).toFixed(2) %></td>
+        <td <% if (!estTrimestre1) { %>colspan="2"<% } %>></td>
+        <td colspan="3"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- BAS DE PAGE -->
+  <div class="bas-page">
+
+    <!-- Colonne 1 : Distinction du trimestre -->
+    <div class="bas-col" style="max-width:160px;">
+      <div class="col-title">DISTINCTION <%= trimestre.libelle.toUpperCase() %></div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction("Tableau d'honneur") ? '&#10003;' : '' %></span>
+        Tableau d'honneur
+      </div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction('Encouragements') ? '&#10003;' : '' %></span>
+        Encouragements
+      </div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction('Félicitations') ? '&#10003;' : '' %></span>
+        Félicitations
+      </div>
+
+      <% if (estTrimestre3) { %>
+      <br/>
+      <div class="col-title">DISTINCTION ANNUELLE</div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction("Tableau d'honneur") ? '&#10003;' : '' %></span>
+        <em>Tableau d'honneur</em>
+      </div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction('Encouragements') ? '&#10003;' : '' %></span>
+        <em>Encouragements</em>
+      </div>
+      <div class="check-row">
+        <span class="cbox"><%= isDistinction('Félicitations') ? '&#10003;' : '' %></span>
+        <em>Félicitations</em>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Colonne 2 : Moyennes générales -->
+    <div class="bas-col">
+      <div class="col-title" style="text-align:center;">MOYENNES GENERALES</div>
+      <table class="moy-t">
+
+        <% if (!estTrimestre1) { %>
+        <tr>
+          <td>Moy. G. 1er trimestre</td>
+          <td style="text-align:center;"></td>
+          <td style="text-align:right;"></td>
+        </tr>
+        <% } %>
+
+        <% if (numTrim === 3) { %>
+        <tr>
+          <td>Moy. G. 2ème trimestre</td>
+          <td style="text-align:center;"></td>
+          <td style="text-align:right;"></td>
+        </tr>
+        <% } %>
+
+        <tr>
+          <td class="bold">Moy. G. <%= trimestre.libelle %></td>
+          <td style="text-align:center;" class="bold"><%= Number(moyenneGenerale).toFixed(2) %></td>
+          <td style="text-align:right;" class="bold"><%= rang %>è</td>
+        </tr>
+      </table>
+
+      <% if (estTrimestre3) { %>
+      <br/>
+      <div style="text-align:center; font-weight:bold; text-decoration:underline; font-size:8pt;">MOYENNE GENERALE ANNUELLE</div>
+      <table class="moy-t" style="margin-top:4px;">
+        <tr>
+          <td>Moy. G. Annuelle</td>
+          <td>&nbsp;<span class="big"></span></td>
+        </tr>
+        <tr>
+          <td>Rang G. Annuel</td>
+          <td>&nbsp;<span class="big"></span></td>
+        </tr>
+      </table>
+      <% } %>
+    </div>
+
+    <!-- Colonne 3 : Signature chef établissement -->
+    <div class="bas-col">
+      <div style="font-weight:bold; text-align:center; font-size:8pt; text-decoration:underline; margin-bottom:4px;">
+        Nom / Signature et Cachet du Chef d'Etablissement
+      </div>
+      <div style="min-height:55px;"></div>
+      <div style="font-size:7.8pt; text-align:center;">
+        <%= etablissement.directeur %>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DÉCISION DU CONSEIL -->
+  <div class="decision-bloc">
+    <div class="dec-left">
+      <div class="dec-title">Décision du conseil de classe</div>
+      <div class="dec-val"><%= decision %></div>
+    </div>
+    <div class="dec-right">
+      <div class="sig-title">Nom / Signature du Professeur principal</div>
+      <div style="min-height:40px;"></div>
+      <div style="font-size:8pt;">
+        Fait à <%= etablissement.adresse.split(',')[0] %>, le _______________
+      </div>
+    </div>
+  </div>
+
+  <!-- PIED DE PAGE -->
+  <div class="footer">
+    Bulletin à conserver précieusement. Aucun duplicata ne sera délivré.
+  </div>
+
+</body>
+</html>

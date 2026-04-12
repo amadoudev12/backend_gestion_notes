@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+enum Role {
+  ADMIN
+  ENSEIGNANT
+  ELEVE
+}
+
+enum SEXE {
+  M
+  F
+}
+enum Redoublant {
+  oui
+  non
+}
+enum Bourse {
+  oui
+  non
+}
+enum Affecte {
+  oui
+  non
+}
+enum Justifie {
+  oui
+  non
+}
+model User {
+  id         Int     @id @default(autoincrement())
+  login      String  @unique
+  mot_passe  String
+  role       Role
+
+  eleve       Eleve?
+  enseignant  Enseignant?
+  admin Administrateur ?
+}
+model Eleve {
+  matricule   String   @id @unique
+  nom         String
+  prenom      String
+  dateNaissance DateTime?
+  lieuNaissance String ?
+  sexe SEXE ? 
+  affecte Affecte  @default(non) 
+  boursier Bourse  @default(non)
+  redoublant Redoublant  @default(non)
+  nationalite String  @default("Ivoirienne") 
+  idClasse    Int
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id])
+  classe      Classe   @relation(fields: [idClasse], references: [id], map: "fk_eleve_classe")
+  notes       Note[]
+  historique ResultatTrimestre[]
+  absence Absence[]
+}
+
+model Enseignant {
+  matricule     String   @id
+  nom           String
+  prenom        String
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id])
+  enseignements Enseigner[]
+}
+
+model Administrateur {
+  id              Int            @id @default(autoincrement())
+  nom             String
+  prenom          String
+  email           String         @unique
+  userId Int      @unique
+  user User @relation(fields: [userId], references: [id])
+  etablissement   Etablissement ?
+}
+
+model Classe {
+  id           Int       @id @default(autoincrement())
+  libelle      String
+  idEtablissement Int ?
+  etablissement    Etablissement? @relation(fields: [idEtablissement], references: [id])
+  eleves       Eleve[]
+  dispensers   Dispenser[]
+  enseignants  Enseigner[]
+}
+
+model Matiere {
+  id            Int       @id @default(autoincrement())
+  nom           String    @unique
+
+  notes         Note[]
+  dispensers    Dispenser[]
+  enseignements Enseigner[]
+}
+
+model Trimestre {
+  id_trimestre Int     @id @default(autoincrement())
+  libelle      String
+  date_debut DateTime 
+  date_fin DateTime 
+  actif Boolean
+  notes        Note[]
+  absence Absence[]
+  resultatTrimestre ResultatTrimestre[]
+}
+
+model Note {
+  id               Int      @id @default(autoincrement())
+  valeur           Float
+  typeEvaluation   String   // Interro, Devoir, Examen
+  coefficient      Int      @default(1)
+  matricule_eleve  String
+  id_matiere       Int
+  id_trimestre     Int
+
+  eleve     Eleve     @relation(fields: [matricule_eleve], references: [matricule])
+  matiere   Matiere   @relation(fields: [id_matiere], references: [id])
+  trimestre Trimestre @relation(fields: [id_trimestre], references: [id_trimestre])
+}
+
+model Dispenser {
+  id           Int @id @default(autoincrement())
+  id_matiere   Int
+  id_classe    Int
+  coefficient  Int
+
+  matiere  Matiere @relation(fields: [id_matiere], references: [id], map: "fk_dispenser_matiere")
+  classe   Classe  @relation(fields: [id_classe], references: [id], map: "fk_dispenser_classe")
+
+  @@unique([id_matiere, id_classe])
+}
+
+model Enseigner {
+  id          Int    @id @default(autoincrement())
+  id_prof     String
+  id_matiere  Int
+  id_classe   Int
+
+  enseignant  Enseignant @relation(fields: [id_prof], references: [matricule], map: "fk_enseigner_prof")
+  matiere     Matiere    @relation(fields: [id_matiere], references: [id], map: "fk_enseigner_matiere")
+  classe      Classe     @relation(fields: [id_classe], references: [id], map: "fk_enseigner_classe")
+
+  @@unique([id_prof, id_matiere, id_classe])
+}
+
+model ResultatTrimestre {
+  id               Int      @id @default(autoincrement())
+  eleveId          String
+  idtrimestre        Int
+  moyenneGenerale  Float
+  decision String
+  rang             Int
+  mention          String?
+  anneeScolaire    String
+  eleve Eleve @relation(fields: [eleveId], references: [matricule])
+  trimestre Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
+}
+model Absence {
+  id               Int      @id @default(autoincrement())
+  nombre            Int
+  justifiee        Justifie @default(oui)
+  // Relation avec élèvej
+  matricule_eleve  String
+  eleve            Eleve    @relation(fields: [matricule_eleve], references: [matricule])
+  // Relation avec trimestre
+  trimestreId      Int
+  trimestre        Trimestre @relation(fields: [trimestreId], references: [id_trimestre])
+
+  createdAt        DateTime @default(now())
+  @@unique([matricule_eleve, trimestreId])
+}
+
+model Etablissement {
+  id      Int    @id @default(autoincrement()) @unique
+  nom     String
+  adresse String
+  phone   String?
+  email   String?
+  code    String
+  statut  String
+  directeur String
+  admin_id Int @unique
+  classe Classe[] 
+  Adminitrateur  Administrateur @relation(fields: [admin_id], references: [id])
+}

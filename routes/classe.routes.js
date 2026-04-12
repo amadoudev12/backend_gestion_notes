@@ -1,0 +1,10 @@
+const express = require('express')
+const { listeEleveParClasse, listeClasses, listeClasseByEtabblissement, getClasseMatiere, bestAndBadMoyenneController } = require('../controllers/classe.controller')
+const route = express.Router()
+const VerifyToken = require('../middleware/verifyToken')
+route.get('/liste-classe/:id', listeEleveParClasse)
+route.get('/liste-des-classes', listeClasses)
+route.get('/etablissement/classe',VerifyToken, listeClasseByEtabblissement)
+route.get('/classe-matiere/:id', getClasseMatiere)
+route.get('/best-moy/:id', bestAndBadMoyenneController)
+module.exports = route

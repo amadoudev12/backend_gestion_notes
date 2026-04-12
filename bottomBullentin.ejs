@@ -1,0 +1,89 @@
+<div class="bottom-outer">
+
+    <!-- COL 1 : Absences + Distinctions + Sanctions -->
+    <div class="b-col" style="flex:0.9;">
+      <div class="b-head">Heures d'absence</div>
+      <div class="b-line"><span>Total</span><span><%= absences.total || '……' %></span></div>
+      <div class="b-line"><span>Justifiées</span><span><%= absences.justifiees || '……' %></span></div>
+      <div class="b-line"><span>Non justifiées</span><b><%= absences.nonJustifiees || '0' %></b></div>
+      <br>
+      <div class="b-head">Distinctions</div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctions.tableauHonneur ? '✓' : '' %></div> Tableau d'honneur
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctions.encouragements ? '✓' : '' %></div> Encouragements
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctions.felicitation ? '✓' : '' %></div> Félicitation
+      </div>
+      <br>
+      <div class="b-head">Sanctions</div>
+      <div class="chk-row">
+        <div class="chk"><%= sanctions.avertissementTravail ? '✓' : '' %></div> Avertissement Travail
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= sanctions.avertissementConduite ? '✓' : '' %></div> Avertissement Conduite
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= sanctions.blameTravail ? '✓' : '' %></div> Blâme Travail
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= sanctions.blameConduite ? '✓' : '' %></div> Blâme Conduite
+      </div>
+    </div>
+
+    <!-- COL 2 : Moyennes générales -->
+    <div class="b-col-mid">
+      <div class="b-head">Moyennes Générales</div>
+      <% if (moyennesTrimestrielles && moyennesTrimestrielles.length > 0) { %>
+      <table style="width:100%; font-size:9.5px; border-collapse:collapse;">
+        <tr>
+          <td></td>
+          <td style="text-align:center; font-weight:bold; padding:1px 4px;">Moy</td>
+          <td style="text-align:center; font-weight:bold; padding:1px 4px;">Rang</td>
+        </tr>
+        <% moyennesTrimestrielles.forEach(function(t) { %>
+        <tr <% if (t.courant) { %>style="font-weight:bold;"<% } %>>
+          <td><%= t.label %></td>
+          <td style="text-align:right; padding:1px 8px;"><%= t.moyenne %></td>
+          <td style="text-align:right; padding:1px 4px;"><%= t.rang %></td>
+        </tr>
+        <% }); %>
+      </table>
+      <% } %>
+      <div class="moy-gen-box">
+        <div class="moy-gen-title">Moyenne Générale du Trimestre</div>
+        <div class="moy-gen-row">
+          <span>Moyenne Générale</span>
+          <span class="moy-gen-val"><%= moyenneGenerale %></span>
+        </div>
+        <div class="moy-gen-row">
+          <span>Rang</span>
+          <span class="moy-gen-val"><%= rang %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 3 : Résultats classe -->
+    <div class="b-col-right">
+      <div class="b-head">Résultats de la Classe</div>
+      <div class="b-line"><span>Moyenne de la classe</span><b><%= resultatsClasse.moyenne || '–' %></b></div>
+      <div class="b-line"><span>Moyenne maxi</span><b><%= resultatsClasse.max || '–' %></b></div>
+      <div class="b-line"><span>Moyenne mini</span><b><%= resultatsClasse.min || '–' %></b></div>
+      <br>
+      <div class="b-head">Distinctions Annuelles</div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctionsAnnuelles.tableauHonneur ? '✓' : '' %></div>
+        <em>Tableau d'honneur</em>
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctionsAnnuelles.felicitation ? '✓' : '' %></div>
+        <em>Félicitation</em>
+      </div>
+      <div class="chk-row">
+        <div class="chk"><%= distinctionsAnnuelles.blameTravail ? '✓' : '' %></div>
+        <em>Blâme Travail</em>
+      </div>
+    </div>
+  </div>
