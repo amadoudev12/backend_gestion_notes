@@ -187,5 +187,5 @@ model Etablissement {
   directeur String
   admin_id Int @unique
   classe Classe[] 
-  Adminitrateur  Administrateur @relation(fields: [admin_id], references: [id])
+  Administrateur  Administrateur @relation(fields: [admin_id], references: [id])
 }

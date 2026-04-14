@@ -65,7 +65,7 @@ const generate = async (matricule) => {
             path: bulletinFile,
             format: 'A4',
             printBackground: true,
-            margin: { top: '20mm', bottom: "20mm" }
+            margin: { top: '20mm', bottom: "20mm", left:"10mm", right:"10mm" }
         })
         await browser.close()
         return bulletinFile
