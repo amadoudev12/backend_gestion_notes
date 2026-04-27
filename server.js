@@ -2,7 +2,7 @@ const express = require('express')
 const activerTrimestreAutomatique = require('./utils/activerTrimestre')
 const cors = require('cors')
 const app = express()
-const port = 5000
+const port = process.env.PORT
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
