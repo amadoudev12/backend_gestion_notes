@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 enum Role {
   ADMIN
@@ -52,22 +52,23 @@ model Eleve {
   boursier Bourse  @default(non)
   redoublant Redoublant  @default(non)
   nationalite String  @default("Ivoirienne") 
-  idClasse    Int
+
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id])
-  classe      Classe   @relation(fields: [idClasse], references: [id], map: "fk_eleve_classe")
-  notes       Note[]
-  historique ResultatTrimestre[]
-  absence Absence[]
+
+  inscriptions Inscription[]   // ✅ ajout
+  historique  ResultatTrimestre[]
+  absence     Absence[]
 }
 
 model Enseignant {
-  matricule     String   @id
+  matricule     String   @id  
   nom           String
   prenom        String
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id])
-  enseignements Enseigner[]
+  affectation Affectation[]
+  etablissements EnseignantEtablissement[]
 }
 
 model Administrateur {
@@ -85,18 +86,18 @@ model Classe {
   libelle      String
   idEtablissement Int ?
   etablissement    Etablissement? @relation(fields: [idEtablissement], references: [id])
-  eleves       Eleve[]
-  dispensers   Dispenser[]
-  enseignants  Enseigner[]
+  inscriptions Inscription[] // IMPORTANT
+  affectation Affectation[]
 }
 
 model Matiere {
-  id            Int       @id @default(autoincrement())
-  nom           String    @unique
-
-  notes         Note[]
-  dispensers    Dispenser[]
-  enseignements Enseigner[]
+  id                Int       @id @default(autoincrement())
+  nom               String
+  etablissement_id  Int    @unique
+  etablissement     Etablissement @relation(fields: [etablissement_id], references: [id])
+  notes             Note[]
+  affectation       Affectation[]
+  @@unique([nom, etablissement_id]) //clé unique par établissement
 }
 
 model Trimestre {
@@ -115,57 +116,79 @@ model Note {
   valeur           Float
   typeEvaluation   String   // Interro, Devoir, Examen
   coefficient      Int      @default(1)
-  matricule_eleve  String
+  id_inscription   Int
   id_matiere       Int
   id_trimestre     Int
 
-  eleve     Eleve     @relation(fields: [matricule_eleve], references: [matricule])
-  matiere   Matiere   @relation(fields: [id_matiere], references: [id])
-  trimestre Trimestre @relation(fields: [id_trimestre], references: [id_trimestre])
+  inscription Inscription @relation(fields: [id_inscription], references: [id])
+  matiere     Matiere     @relation(fields: [id_matiere], references: [id])
+  trimestre   Trimestre   @relation(fields: [id_trimestre], references: [id_trimestre])
+
+  @@index([id_inscription])
+  @@index([id_matiere])
+  @@index([id_trimestre])
 }
 
-model Dispenser {
+// model Dispenser {
+//   id           Int @id @default(autoincrement())
+//   id_matiere   Int
+//   id_classe    Int
+//   coefficient  Int
+
+//   matiere  Matiere @relation(fields: [id_matiere], references: [id], map: "fk_dispenser_matiere")
+//   classe   Classe  @relation(fields: [id_classe], references: [id], map: "fk_dispenser_classe")
+
+//   @@unique([id_matiere, id_classe])
+// }
+
+// model Enseigner {
+//   id          Int    @id @default(autoincrement())
+//   id_prof     String
+//   id_matiere  Int
+//   id_classe   Int
+
+//   enseignant  Enseignant @relation(fields: [id_prof], references: [matricule], map: "fk_enseigner_prof")
+//   matiere     Matiere    @relation(fields: [id_matiere], references: [id], map: "fk_enseigner_matiere")
+//   classe      Classe     @relation(fields: [id_classe], references: [id], map: "fk_enseigner_classe")
+
+//   @@unique([id_prof, id_matiere, id_classe])
+// }
+
+model Affectation {
   id           Int @id @default(autoincrement())
-  id_matiere   Int
   id_classe    Int
+  id_matiere   Int
+  id_prof      String
   coefficient  Int
 
-  matiere  Matiere @relation(fields: [id_matiere], references: [id], map: "fk_dispenser_matiere")
-  classe   Classe  @relation(fields: [id_classe], references: [id], map: "fk_dispenser_classe")
+  classe     Classe     @relation(fields: [id_classe], references: [id])
+  matiere    Matiere    @relation(fields: [id_matiere], references: [id])
+  enseignant Enseignant @relation(fields: [id_prof], references: [matricule])
 
-  @@unique([id_matiere, id_classe])
+  @@unique([id_classe, id_matiere])
 }
-
-model Enseigner {
-  id          Int    @id @default(autoincrement())
-  id_prof     String
-  id_matiere  Int
-  id_classe   Int
-
-  enseignant  Enseignant @relation(fields: [id_prof], references: [matricule], map: "fk_enseigner_prof")
-  matiere     Matiere    @relation(fields: [id_matiere], references: [id], map: "fk_enseigner_matiere")
-  classe      Classe     @relation(fields: [id_classe], references: [id], map: "fk_enseigner_classe")
-
-  @@unique([id_prof, id_matiere, id_classe])
-}
-
 model ResultatTrimestre {
   id               Int      @id @default(autoincrement())
   eleveId          String
-  idtrimestre        Int
+  idtrimestre      Int
+  id_annee         Int   // ✅ ajouté
   moyenneGenerale  Float
-  decision String
+  decision         String
   rang             Int
   mention          String?
-  anneeScolaire    String
-  eleve Eleve @relation(fields: [eleveId], references: [matricule])
-  trimestre Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
+
+  eleve       Eleve @relation(fields: [eleveId], references: [matricule])
+  trimestre   Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
+  annee       AnneeAcademique @relation(fields: [id_annee], references: [id])
+
+  @@unique([eleveId, idtrimestre, id_annee])
 }
+
 model Absence {
   id               Int      @id @default(autoincrement())
   nombre            Int
   justifiee        Justifie @default(oui)
-  // Relation avec élèvej
+  // Relation avec élève
   matricule_eleve  String
   eleve            Eleve    @relation(fields: [matricule_eleve], references: [matricule])
   // Relation avec trimestre
@@ -188,4 +211,42 @@ model Etablissement {
   admin_id Int @unique
   classe Classe[] 
   Administrateur  Administrateur @relation(fields: [admin_id], references: [id])
+  enseignants   EnseignantEtablissement[]
+  Matieres Matiere[]
+}
+
+
+model AnneeAcademique {
+  id            Int      @id @default(autoincrement())
+  libelle       String   // ex: 2025-2026
+  date_debut    DateTime
+  date_fin      DateTime
+  actif         Boolean  @default(false)
+
+  inscriptions  Inscription[]
+  resultats     ResultatTrimestre[]
+}
+
+model Inscription {
+  id                    Int      @id @default(autoincrement())
+  matricule_eleve       String
+  id_classe             Int
+  id_annee_academique   Int
+  dateInscription       DateTime @default(now())
+  eleve   Eleve   @relation(fields: [matricule_eleve], references: [matricule])
+  classe  Classe  @relation(fields: [id_classe], references: [id])
+  annee   AnneeAcademique @relation(fields: [id_annee_academique], references: [id])
+  notes Note[]
+  @@unique([matricule_eleve, id_annee_academique])
+}
+
+model EnseignantEtablissement {
+  id               Int @id @default(autoincrement())
+  enseignant_id    String
+  etablissement_id Int
+
+  enseignant    Enseignant @relation(fields: [enseignant_id], references: [matricule])
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([enseignant_id, etablissement_id])
 }

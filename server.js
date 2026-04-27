@@ -1,4 +1,5 @@
 const express = require('express')
+const activerTrimestreAutomatique = require('./utils/activerTrimestre')
 const cors = require('cors')
 const app = express()
 const port = 5000
@@ -6,7 +7,7 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 
-
+activerTrimestreAutomatique()
 app.use('/eleves', require('./routes/eleves.route'))
 app.use('/enseignants', require('./routes/enseignants.route'))
 app.use('/user', require('./routes/user.route'))
@@ -16,4 +17,7 @@ app.use('/trimestres', require('./routes/trimestres.route'))
 app.use('/etablissements', require('./routes/etalisement.routes'))
 app.use('/admin', require('./routes/admin.route'))
 app.use('/bulletin', require('./routes/bulletin.route'))
+app.use('/affectation', require("./routes/affectation.route"))
+app.use('/matieres', require('./routes/matieres.route'))
+
 app.listen(port,()=>console.log('server on'))

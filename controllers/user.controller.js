@@ -2,53 +2,66 @@ const {prisma}= require('../lib/prisma')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const secret_key = process.env.SECRET_KEY
-const loginController = async(req,res)=>{ 
-    const body = req.body
-    if(!body){
-        return res.json({messahe:"veuillez renseigner les données demandé"}).status(404)
+const loginController = async (req, res) => {
+    const { login, mot_passe } = req.body;
+    if (!login || !mot_passe) {
+        return res.status(400).json({
+            message: "Veuillez renseigner les données demandées"
+        });
     }
-
-    try{
-        // const {login, mot_passe} = body
+    try {
         const user = await prisma.user.findUnique({
-            where:{login:body.login}
-        })
-
-        const hashCompare = await bcrypt.compare(user.mot_passe, body.mot_passe) 
-        console.log(hashCompare)
-        if(!user){
-            return res.status(404).json({message:"login incorrect ou mot Passe"})
+            where: { login }
+        });
+        if (!user) {
+            return res.status(404).json({
+                message: "Login incorrect ou mot de passe"
+            });
         }
-        let profil = null
-        if(user.role=="ELEVE"){
+        const hashCompare = await bcrypt.compare(
+            mot_passe,
+            user.mot_passe
+        );
+        if (!hashCompare) {
+            return res.status(401).json({
+                message: "Mot de passe incorrect"
+            });
+        }
+        let profil = null;
+        if (user.role === "ELEVE") {
             profil = await prisma.eleve.findUnique({
-                where:{matricule:body.login}
-            })
+                where: { matricule: login }
+            });
         }
-        if(user.role=="ENSEIGNANT"){
+        if (user.role === "ENSEIGNANT") {
             profil = await prisma.enseignant.findUnique({
-                where:{matricule:body.login}
-            })
+                where: { matricule: login }
+            });
         }
-        if(user.role=="ADMIN"){
+        if (user.role === "ADMIN") {
             profil = await prisma.administrateur.findUnique({
-                where : {userId:user.id},
-                include : {
-                    etablissement : true
-                }
-            })
+                where: { userId: user.id },
+                include: { etablissement: true }
+            });
         }
-        delete user.mot_passe
-        const token = jwt.sign({
-            user:user,
-            profil:profil
-        },secret_key, {expiresIn:"7d"} )
-        return res.status(201).json({message:`bienvenue ${profil.nom}`,token})
-    }catch(err){
-        console.log(err)
-        return res.json({message:'erreur au niveaux de la base',err}).status(505)
+        delete user.mot_passe;
+        const token = jwt.sign(
+            { user, profil },
+            secret_key,
+            { expiresIn: "7d" }
+        );
+        return res.status(200).json({
+            message: `Bienvenue ${profil?.nom || "utilisateur"}`,
+            token
+        });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: "Erreur serveur",
+            err
+        });
     }
-}
+};
 
 module.exports = {
     loginController

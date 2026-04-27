@@ -36,12 +36,13 @@ const generate = async (matricule) => {
                 actif:true
             }
         })
-        const { eleve, matiere, moyenneGenerale, rang, enseignants, etablissement, rangMatiere } = await getBulletinInformation(matricule)
+        const { eleveInfo, matiere, moyenneGenerale, rang, enseignants, etablissement, rangMatiere } = await getBulletinInformation(matricule)
         const decision = moyenneGenerale >= 10 ? "Admis" : "Double"
         const distinction = Distinction(moyenneGenerale)
         const fichier = path.join(__dirname, '../view/bulletin.ejs')
+        console.log('eleve info:',eleveInfo)
         const html = await ejs.renderFile(fichier, {
-            eleve,
+            eleve:eleveInfo,
             matiere,
             moyenneGenerale,
             rang,
@@ -60,7 +61,7 @@ const generate = async (matricule) => {
         const page = await browser.newPage()
         await page.setContent(html, { waitUntil: "networkidle0" })
         //chemin du fichier PDF
-        const bulletinFile = path.join(tempDir, `bulletin-${eleve.nom}.pdf`)
+        const bulletinFile = path.join(tempDir, `bulletin-${eleveInfo?.eleve.nom}.pdf`)
         await page.pdf({
             path: bulletinFile,
             format: 'A4',
@@ -94,7 +95,7 @@ const generateClasseBulletin = async (id_classe) => {
         let htmlGlobal = ''
         const fichier = path.join(__dirname, '../view/bulletin.ejs')
         for (const eleveItem of eleves) {
-            const { eleve, matiere, moyenneGenerale, rang, etablissement, rangMatiere   } = await getBulletinInformation(eleveItem.matricule)
+            const { eleveInfo, matiere, moyenneGenerale, rang, etablissement, rangMatiere   } = await getBulletinInformation(eleveItem.matricule)
             console.log("moyenne generale",moyenneGenerale)
             if (isNaN(moyenneGenerale)) {
                 console.log(`Aucune note pour ${eleveItem.matricule}, on skip`);
@@ -104,7 +105,7 @@ const generateClasseBulletin = async (id_classe) => {
             const mention = getMention(moyenneGenerale)
             const distinction = Distinction(moyenneGenerale)
             const html = await ejs.renderFile(fichier, {
-                eleve,
+                eleve:eleveInfo,
                 matiere,
                 moyenneGenerale,
                 rang,
@@ -118,21 +119,21 @@ const generateClasseBulletin = async (id_classe) => {
 
             htmlGlobal += `<div class="page">${html}</div>`
 
-            await prisma.resultatTrimestre.create({
-                data: {
-                    eleve: {
-                        connect : {
-                            matricule : eleveItem.matricule
-                        }
-                    },
-                    moyenneGenerale:moyenneGenerale,
-                    decision,
-                    rang,
-                    mention,
-                    anneeScolaire: "2025 - 2026",
-                    idtrimestre: 1
-                }
-            })
+            // await prisma.resultatTrimestre.create({
+            //     data: {
+            //         eleve: {
+            //             connect : {
+            //                 matricule : eleveItem.matricule
+            //             }
+            //         },
+            //         moyenneGenerale:moyenneGenerale,
+            //         decision,
+            //         rang,
+            //         mention,
+            //         anneeScolaire: "2025 - 2026",
+            //         idtrimestre: 1
+            //     }
+            // })
         }
 
         // CSS propre — une page = un bulletin, sans débordement

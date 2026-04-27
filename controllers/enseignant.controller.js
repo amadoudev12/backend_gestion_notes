@@ -1,34 +1,123 @@
 const {prisma} = require('../lib/prisma')
+const xlsx = require('xlsx')
 const bcrypt = require('bcrypt')
-const createEnseignantController = async(req,res)=>{
-    const body = req.body
-    if(!body){
+const createEnseignantController = async (req, res) => {
+
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    if(!admin_id){
         return res.status(400).json({message:'fournissez les donnés'})
     }
-    try{
-            // const {enseignants} = body
-            for (let enseignant of body){
-                const hashPass = await bcrypt.hash(enseignant.matricule,10)
-                const user = await prisma.user.create({
-                    data : {
-                        login:enseignant.matricule,
-                        mot_passe:hashPass,
-                        role:"ENSEIGNANT"
-                    }
-                })
-                await prisma.enseignant.create({
+
+    if (!req.file) {
+        return res.status(404).json("aucun fichier n'a été sélectionné");
+    }
+    const idEtablissement = req.user.profil.etablissement.id
+    try {
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        });
+
+        const filename = req.file.filename;
+        const wb = xlsx.readFile(`./upload/${filename}`);
+        const sheetName = wb.SheetNames[0];
+        const sheet = wb.Sheets[sheetName];
+        const enseignants = xlsx.utils.sheet_to_json(sheet);
+        console.log(enseignants)
+        for (let enseignant of enseignants) {
+
+            //sécuriser matricule
+            const matricule = enseignant.matricule?.toString().trim();
+
+            // if (!matricule) continue;
+
+            // chercher user
+            let user = await prisma.user.findUnique({
+                where: { login: matricule }
+            });
+
+            // créer user si inexistant
+            if (!user) {
+                const hashPass = await bcrypt.hash(matricule, 10);
+                user = await prisma.user.create({
                     data: {
-                        matricule: enseignant.matricule,
-                        nom: enseignant.prenom,
+                        login: matricule,
+                        mot_passe: hashPass,
+                        role: "ENSEIGNANT"
+                    }
+                });
+            }
+            // vérifier enseignant
+            let enseignantExist = await prisma.enseignantEtablissement.findUnique({
+                where :{
+                    enseignant_id_etablissement_id: {
+                        enseignant_id: matricule,
+                        etablissement_id: 1
+                    }
+                }
+            });
+
+            if (!enseignantExist) {
+                const enseignantCree = await prisma.enseignant.create({
+                    data: {
+                        matricule: matricule,
+                        nom: enseignant.nom,  
                         prenom: enseignant.prenom,
-                        userId: user.id,
+                        userId: user.id
+                    }
+                });
+                await prisma.enseignantEtablissement.create({
+                    data:{
+                        enseignant_id:enseignantCree.matricule,
+                        etablissement_id:idEtablissement
                     }
                 })
             }
-            return res.status(201).json({message:'les enseignants ont été enregistré avec succes'})
-    }catch(err){
-            console.log(err)
-            return res.status(500).json({message:"erreur:",err})
+        }
+
+        return res.status(201).json({
+            message: "Les enseignants ont été enregistrés avec succès"
+        });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: "erreur",
+            error: err.message
+        });
+    }
+};
+
+const enseignantEtablissement = async (req, res)=>{
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+    if (!req.user.profil.etablissement) {
+        return res.status(400).json({ message: "établissement introuvable" });
+    }
+    const idEtablissement = req.user.profil.etablissement.id
+    
+    try {
+        const enseignants = await prisma.enseignantEtablissement.findMany({
+            where : {etablissement_id:idEtablissement},
+            include :{
+                enseignant:true
+            }
+        })
+        // console.log(enseignant)
+        return res.status(200).json({enseignants})
+    }catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: "erreur",
+            error: err.message
+        });
     }
 }
 
@@ -43,7 +132,7 @@ const getEnseignantByMatriculeController = async (req, res) => {
         const enseignant = await prisma.enseignant.findUnique({
             where: { matricule },
             include: {
-                enseignements : {
+                affectation : {
                     include : {
                         classe:true
                     }
@@ -76,7 +165,7 @@ const classeEnseignerParEnsignant = async(req,res)=>{
         const classe = await prisma.enseignant.findUnique({
             where:{matricule:matricule},
             include : {
-                enseignements:{
+                affectation:{
                     include:{
                         classe:true,
                         matiere:true
@@ -84,10 +173,11 @@ const classeEnseignerParEnsignant = async(req,res)=>{
                 }
             }
         })
+        console.log(classe)
         if(!classe){
             return res.status(404).json({message:"information non trouvé"})
         }
-        const classeEnseigner = classe.enseignements.map(item=>({
+        const classeEnseigner = classe?.affectation.map(item=>({
             classe:item.classe, matiere: item.matiere.nom
         }))
         return res.status(201).json({message:"liste des classe:", classeEnseigner})
@@ -103,19 +193,19 @@ const enseignantStatController = async (req,res)=>{
         }
         const matricule = req.user.profil.matricule
         console.log(matricule)
-        const nombreClasse = await prisma.enseigner.count({
+        const nombreClasse = await prisma.affectation.count({
             where : {id_prof:matricule}
         })
-        const classes= await prisma.enseigner.findMany({
+        const classes= await prisma.affectation.findMany({
             where:{id_prof:matricule},
             select:{
                 classe:{select:{id:true}}
             }
         })
         const classeIds = classes.map(item=>item.classe.id)
-        const nombreEleve = await prisma.eleve.count({
+        const nombreEleve = await prisma.inscription.count({
             where:{
-                idClasse:{in: classeIds}
+                id_classe:{in: classeIds}
             }
         })
         return res.status(201).json({message:"stat:", nombreClasse, nombreEleve})
@@ -129,5 +219,6 @@ module.exports = {
     createEnseignantController, 
     getEnseignantByMatriculeController, 
     classeEnseignerParEnsignant,
-    enseignantStatController
+    enseignantStatController,
+    enseignantEtablissement
 }

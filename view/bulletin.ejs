@@ -239,21 +239,21 @@
   <!-- ÉLÈVE -->
   <div class="bloc-eleve">
     <div class="col-gauche">
-      <div class="nom"><%= eleve.nom %> <%= eleve.prenom %></div>
-      <div class="mat">Matricule : <%= eleve.matricule %></div>
+      <div class="nom"><%= eleve.eleve.nom %> <%= eleve.eleve.prenom %></div>
+      <div class="mat">Matricule : <%= eleve.eleve.matricule %></div>
       <div class="cls">Classe : <strong><%= eleve.classe.libelle %></strong></div>
       <!-- <div class="cls">Bulletin N° <%= rang %></div> -->
     </div>
     <div class="col-centre">
-      Genre : <strong><%= eleve.sexe %></strong><br/>
+      Genre : <strong><%= eleve.eleve.sexe %></strong><br/>
       Né(e) le <strong><%= dateNaissanceStr %></strong><br/>
-      Lieu de naissance : <strong><%= eleve.lieuNaissance %></strong><br/>
-      Nationalité : <strong><%= eleve.nationalite %></strong>
+      Lieu de naissance : <strong><%= eleve.eleve.lieuNaissance %></strong><br/>
+      Nationalité : <strong><%= eleve.eleve.nationalite %></strong>
     </div>
     <div class="col-droite">
-      Redoublant : <strong><%= eleve.redoublant %></strong><br/>
-      Boursier : <strong><%= eleve.boursier %></strong><br/>
-      Affecté : <strong><%= eleve.affecte %></strong>
+      Redoublant : <strong><%= eleve.eleve.redoublant %></strong><br/>
+      Boursier : <strong><%= eleve.eleve.boursier %></strong><br/>
+      Affecté : <strong><%= eleve.eleve.affecte %></strong>
     </div>      
     <div class="photo-box">PHOTO</div>
   </div>

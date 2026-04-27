@@ -10,8 +10,17 @@ const postNote = async (req, res)=>{
         return res.status(400).json({message:'aucune classe selectionne'})
     }
     const id_matiere = await prisma.matiere.findFirst({where:{nom:config.matiere}, select:{id:true}})
+    const anne = await prisma.anneeAcademique.findFirst({where:{actif:true}})
     try{
         for (let note of notes ) {
+            const inscription = await prisma.inscription.findUnique({
+                where :{
+                    matricule_eleve_id_annee_academique:{
+                        matricule_eleve:note.matricule,
+                        id_annee_academique:anne.id
+                    }
+                }
+            })
             await prisma.note.create({
                 data:{
                     trimestre:{
@@ -24,8 +33,10 @@ const postNote = async (req, res)=>{
                     matiere : {
                         connect: id_matiere
                     },
-                    eleve:{
-                        connect : {matricule:note.matricule}
+                    inscription:{
+                        connect: {
+                            id:Number(inscription.id)
+                        }
                     }
                 }
             })
@@ -41,9 +52,18 @@ const getNotesByElveId = async (req,res)=>{
     if(!matricule){
         return res.status(400).json({message:'veuillez renseigner le matricule'})
     }
+    const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+    const inscription = await prisma.inscription.findUnique({
+        where:{
+            matricule_eleve_id_annee_academique:{
+                matricule_eleve:matricule,
+                id_annee_academique:annee.id
+            }
+        }
+    })
     try {
         const notes = await prisma.note.findMany({
-            where:{matricule_eleve:matricule},
+            where:{id_inscription:inscription.id},
             select : {
                 typeEvaluation:true,
                 coefficient:true,
@@ -141,8 +161,65 @@ const getAllNotesByClasseByMatier = async (req,res)=>{
         return res.status(500).json({message:"erreur", err})       
     }
 }
+
+
+const noteRepartition = async (req, res)=>{
+    const partition = {
+        "0-5": 0,
+        "5-10": 0,
+        "10-15": 0,
+        "15-20": 0,
+    }
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+        if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+    try {
+        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+        const etablissement = await prisma.etablissement.findUnique({where:{admin_id:admin_id}})
+        const trimestre = await prisma.trimestre.findFirst({where:{actif:true}})
+        if(!etablissement){
+            return null
+        }
+        if(!trimestre){
+            return 0
+        }
+        const notes = await prisma.note.findMany({
+            where : {
+                inscription:{
+                    classe:{
+                        idEtablissement:etablissement.id
+                    },
+                    id_annee_academique:annee.id
+                },
+                id_trimestre:trimestre.id_trimestre
+            }
+        })
+
+        notes.forEach((note)=> {
+            if(note.valeur < 5) partition["0-5"]++
+            else if (note.valeur < 10) partition["5-10"]++
+            else if (note.valeur < 15) partition["10-15"]++
+            else partition["15-20"]++
+        })
+        const repartition = [
+            { range: "0–5", count: partition["0-5"] },
+            { range: "5–10", count: partition["5-10"] },
+            { range: "10–15", count: partition["10-15"] },
+            { range: "15–20", count: partition["15-20"] },
+        ]
+        return res.status(200).json({message:"repartition", repartition})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({message:"imposible d'acceder au serveur"})
+    }
+}
 module.exports = {
     postNote,
     getNotesByElveId,
-    getAllNotesByClasseByMatier
+    getAllNotesByClasseByMatier,
+    noteRepartition
 }

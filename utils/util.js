@@ -10,17 +10,32 @@ const getMention = (moyenne) => {
 
 
 
-const listeElevesRequest = async (idClasse)=>{
-    try{
-        const liste = await prisma.eleve.findMany({
-            where : {idClasse:Number(idClasse)}
-        })
-        return liste
-    }catch(err){
-        console.log("error au niveau du utils",err)
-        return err
+const listeElevesRequest = async (idClasse) => {
+    console.log("id classe",idClasse)
+    try {
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        });
+        if (!annee) {
+            throw new Error("Aucune année académique active");
+        }
+        const inscriptions = await prisma.inscription.findMany({
+            where: {
+                id_classe:Number(idClasse),
+                id_annee_academique: annee.id
+            },
+            include: {
+                eleve:true
+            }
+        });
+        // on retourne uniquement les élèves
+        const listeEleves = inscriptions.map(i => i.eleve);
+        return listeEleves;
+    } catch (err) {
+        console.log("error au niveau du utils", err);
+        throw err;
     }
-}
+};
 
 
 const moyenne = (tab) => {
@@ -61,22 +76,30 @@ const getNoteFunction = async (id) => {
         const trimestre = await prisma.trimestre.findFirst({
             where: { actif: true }
         })
+        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
         const eleve = await prisma.eleve.findUnique({
             where: { matricule: id },
             include: {
-                notes: {
+                inscriptions: {
                     where: {
-                        id_trimestre: trimestre.id_trimestre
+                        id_annee_academique: annee.id
                     },
-                    select: {
-                        valeur: true,
-                        coefficient: true,
-                        matiere: {
+                    include: {
+                        notes: {
+                            where: {
+                                id_trimestre: trimestre.id_trimestre
+                            },
                             select: {
-                                nom: true,
-                                dispensers: {
+                                valeur: true,
+                                coefficient: true,
+                                matiere: {
                                     select: {
-                                        coefficient: true
+                                        nom: true,
+                                        affectation:{
+                                            select:{
+                                                coefficient:true
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -89,14 +112,18 @@ const getNoteFunction = async (id) => {
         if (!eleve) {
             throw new Error("élève introuvable")
         }
+        if (!eleve.inscriptions.length) {
+            return []
+        }
+        const inscription = eleve.inscriptions[0]
         // aucune note
-        if (!eleve.notes || eleve.notes.length === 0) {
+        if (!eleve.inscriptions.length || !eleve.inscriptions[0].notes.length) {
             return []
         }
         const matieres = {}
-        eleve.notes.forEach(note => {
+        inscription.notes.forEach(note => {
             const nomMatiere = note.matiere.nom
-            const coefMatiere = note.matiere.dispensers[0]?.coefficient
+            const coefMatiere = note.matiere.affectation[0]?.coefficient
             if (!matieres[nomMatiere]) {
                 matieres[nomMatiere] = {
                     matiere: nomMatiere,
@@ -121,16 +148,21 @@ const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
     if(!id){
         throw new Error('aucun id selectionné')
     }
+    const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+    const inscription = await prisma.inscription.findUnique({where:{
+        matricule_eleve:id,
+        id_annee_academique:annee.id
+    }})
     try {
         const notes = await prisma.note.findMany({
-            where:{ matricule_eleve:id, id_matiere:id_matiere, id_trimestre:id_trimestre },
+            where:{ id_inscription:inscription.id, id_matiere:id_matiere, id_trimestre:id_trimestre },
             select:{
                 valeur:true,
                 coefficient:true,
                 matiere : {
                     select : {
                         nom:true,
-                        dispensers:{
+                        affectation:{
                             select : {
                                 coefficient:true,
                             }
@@ -149,7 +181,7 @@ const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
         const matieres = {}
         notes.forEach(note => {
             const nomMatiere = note.matiere.nom
-            const coefMatiere = note.matiere.dispensers[0]?.coefficient
+            const coefMatiere = note.matiere.affectation[0]?.coefficient
             const matricule = note.eleve.matricule
             const nom = note.eleve.nom
             const prenom = note.eleve.prenom
@@ -191,6 +223,7 @@ const calculerMoyenne = async (id) => {
 
 // calcule du rang 
 const getRang = async (matricule, idClasse)=>{
+    console.log(idClasse)
     const moyennesEleves = []
     try{
         const listeEleves = await listeElevesRequest(idClasse)
@@ -215,7 +248,7 @@ const getRang = async (matricule, idClasse)=>{
         //console.log(rang)
         return rang
     }catch(err){
-        return res.status(500).json({message:'erreur:', err})
+        return err
     }
 }
 
@@ -298,17 +331,23 @@ const bestAndBadMoyClasse = async(id)=>{
         console.log("erreur au niveau de la fonction de recuperation de la moyenne",err)
     }
 }
-
+// moyenne de la classe 
 const moyClasse = async (id) => {
     try {
-        const eleves = await prisma.eleve.findMany({
-            where:{
-                idClasse:Number(id)
+        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+        const eleves = await prisma.inscription.findMany({
+            where :{
+                classe:{
+                    id:id
+                },
+                id_annee_academique:annee.id
             }
         })
+        
         let sum = 0
         for(let eleve of eleves){
-            const moyenneMatieres = await calculerMoyenne(eleve.matricule)
+            
+            const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
             sum += moyenneEleve
         }
@@ -321,58 +360,76 @@ const moyClasse = async (id) => {
 
 // information du bulletin 
 const getBulletinInformation = async (matricule)=>{
-    
     try{
-        const eleve = await prisma.eleve.findUnique({
-            where:{matricule:matricule},
-            include : {
-                classe : {
-                    select: {
+        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+        const eleve = await prisma.inscription.findFirst({
+            where :{
+                matricule_eleve:matricule,
+                id_annee_academique:annee.id
+            },
+            include :{
+                eleve:true,
+                classe:{
+                    select :{
+                        id:true,
                         libelle:true,
                         idEtablissement:true
                     }
                 }
             }
         })
-        const idEtablissement = eleve.classe?.idEtablissement;
+        const idEtablissement = eleve.classe?.idEtablissement
         const etablissement = await prisma.etablissement.findUnique({
             where : {
-                    id:idEtablissement
+                id:idEtablissement
             }
         })
-        const enseignants = await prisma.enseigner.findMany({
-            where : {
-                id_classe : eleve.idClasse
+        // const enseignants = await prisma.aff.findMany({
+        //     where : {
+        //         id_classe : eleve.classe.id
+        //     },
+        //     include : {
+        //         enseignant : {
+        //             select : {
+        //                 nom:true,
+        //                 prenom:true
+        //             }
+        //         }
+        //     }
+        // })
+        const enseignants = await prisma.affectation.findMany({
+            where:{
+                id_classe:eleve.classe.id
             },
-            include : {
-                enseignant : {
-                    select : {
+            include:{
+                enseignant:{
+                    select:{
                         nom:true,
                         prenom:true
                     }
                 }
             }
         })
-        
         const matieres = await calculerMoyenne(matricule)
         const matiereAvecProf = await Promise.all(
                 matieres.map(async (m) => {
                 const matiereId = await prisma.matiere.findUnique({
-                    where: { nom: m.matiere },
+                    where: { nom_etablissement_id:{
+                        nom: m.matiere, etablissement_id:etablissement.id 
+                    }},
                     select: { id: true }
-                });
-
+                })
                 if (!matiereId) {
                     // Si la matière n'existe pas, on retourne juste la matière sans prof
                     return { ...m, professeur: "Non attribué" };
                 }
-                const enseignant = await prisma.enseigner.findFirst({
-                    where: {
-                        id_classe: eleve.idClasse,
-                        id_matiere: matiereId.id
+                const enseignant = await prisma.affectation.findFirst({
+                    where:{
+                        id_classe:eleve.classe.id,
+                        id_matiere:matiereId.id
                     },
-                    include: {
-                        enseignant: { select: { nom:true, prenom:true } }
+                    include:{
+                        enseignant: {select:{nom:true, prenom:true}}
                     }
                 })
                 return {
@@ -382,11 +439,11 @@ const getBulletinInformation = async (matricule)=>{
             })
         )
         const moyenneGenerale = moyenne(matieres)
-        const rang = await getRang(matricule, eleve.idClasse)
-        const rangMatiere = await getRangParMatiere(matricule, eleve.idClasse)
+        const rang = await getRang(matricule, eleve.classe.id)
+        const rangMatiere = await getRangParMatiere(matricule, eleve.classe.id)
         console.log(rangMatiere)
         return{
-            eleve:eleve,
+            eleveInfo:eleve,
             matiere:Object.values(matiereAvecProf),
             moyenneGenerale:moyenneGenerale,
             rang:rang,
@@ -399,21 +456,90 @@ const getBulletinInformation = async (matricule)=>{
     }
 }
 
-const moyenneElevesEtablissement = async(admin_id, type)=>{
+// recuperer les eleves bon et mauvais 
+const moyenneElevesEtablissement = async (admin_id, type) => {
+    try {
+        const etablissement = await prisma.etablissement.findUnique({
+            where: { admin_id: admin_id }
+        })
+
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        })
+
+        if (!etablissement) {
+            return []
+        }
+
+        const eleves = await prisma.inscription.findMany({
+            where: {
+                id_annee_academique: annee.id,
+                classe: {
+                    idEtablissement: etablissement.id
+                }
+            },
+            include: {
+                eleve: true,
+                classe: {
+                    select: {
+                        libelle: true
+                    }
+                }
+            }
+        })
+
+        const moyennes = await Promise.all(
+            eleves.map(async (eleve) => {
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
+
+                const moyenneGenerale = moyenneMatieres.length
+                    ? moyenne(moyenneMatieres)
+                    : 0
+
+                return {
+                    matricule: eleve.eleve.matricule,
+                    nom: eleve.eleve.nom,
+                    prenom: eleve.eleve.prenom,
+                    classe: eleve.classe.libelle,
+                    moyenne: moyenneGenerale
+                }
+            })
+        )
+
+        if (type === "faibles") {
+            return moyennes.filter(m => m.moyenne < 10)
+        } else {
+            return moyennes.filter(m => m.moyenne >= 10)
+        }
+
+    } catch (err) {
+        console.log("ERREUR MOYENNE:", err)
+        return []
+    }
+}
+
+const moyenneEtablissement = async(admin_id)=>{
     try{
         const etablissement = await prisma.etablissement.findUnique({
             where : {admin_id :admin_id}
         })
+        const trimestre = await prisma.trimestre.findFirst({where:{actif:true}})
         if(!etablissement){
-            return res.status(200).json({message:"aucun etablissement trouvés"})
+            return null
         }
-        const eleves =  await prisma.eleve.findMany({
-            where:{
+        if(!trimestre){
+            return 0
+        }
+        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+                const eleves = await prisma.inscription.findMany({
+            where :{
+                id_annee_academique:annee.id,
                 classe:{
                     idEtablissement:etablissement.id
                 }
             },
-            include:{
+            include : {
+                eleve:true,
                 classe:{
                     select:{
                         libelle:true
@@ -421,48 +547,10 @@ const moyenneElevesEtablissement = async(admin_id, type)=>{
                 }
             }
         })
-        const moyennes = await Promise.all(
-            eleves.map(async (eleve) =>{
-                const moyenneMatieres = await calculerMoyenne(eleve.matricule)
-                const moyenneGenerale = moyenne(moyenneMatieres)
-                return {
-                    matricule: eleve.matricule,
-                    nom: eleve.nom,
-                    prenom: eleve.prenom,
-                    classe:eleve.classe.libelle,
-                    moyenne: moyenneGenerale
-                }
-            })
-        )
-        if(type == "faibles"){
-            const faibles = moyennes.filter(m=> m.moyenne < 10)
-            return faibles
-        }else{
-            const best = moyennes.filter(m=> m.moyenne > 10)
-            return best
-        }
-    }catch(err){
-        return err
-    }
-}
-const moyenneEtablissement = async(admin_id)=>{
-    try{
-        const etablissement = await prisma.etablissement.findUnique({
-            where : {admin_id :admin_id}
-        })
-        if(!etablissement){
-            return res.status(200).json({message:"aucun etablissement trouvés"})
-        }
-        const eleves =  await prisma.eleve.findMany({
-            where:{
-                classe:{
-                    idEtablissement:etablissement.id
-                }
-            }
-        })
+
         const moyennesEleves = await Promise.all(
             eleves.map(async (eleve) =>{
-                const moyenneMatieres = await calculerMoyenne(eleve.matricule)
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
                 const moyenneGenerale = moyenne(moyenneMatieres)
                 return {
                     moyenneGenerale: moyenneGenerale
@@ -470,7 +558,10 @@ const moyenneEtablissement = async(admin_id)=>{
             })
         )
         const moyenneEtablissement = moyenneE(moyennesEleves)
-        return moyenneEtablissement
+        return {
+            moyenneEtablissement,
+            trimestre:trimestre.libelle
+        }
     }catch(err){
         return err
     }
@@ -479,10 +570,19 @@ const moyenneEtablissement = async(admin_id)=>{
 
 const meilleureByClasse = async (idClasse)=>{
     try {
-        const eleves = await prisma.eleve.findMany({where:{idClasse:idClasse}})
+        const eleves = await prisma.inscription.findMany({
+            where :{
+                classe:{
+                    id:idClasse
+                }
+            },
+            include : {
+                eleve:true,
+            }
+        })
         let elevesWithMoy = []
         for(let eleve of eleves){
-            const moyenneMatieres = await calculerMoyenne(eleve.matricule)
+            const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
             elevesWithMoy.push({
                 nom:eleve.nom,
