@@ -7,18 +7,28 @@ const { getBulletinInformation, getMention } = require('./util')
 const { prisma } = require('../lib/prisma')
 
 // Fonction pour configurer les options de lancement de Puppeteer
-const getLaunchOptions = (tempDir) => ({
-    headless: true,
-    userDataDir: tempDir,
-    args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Important pour les serveurs Linux
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-default-browser-check'
-    ],
-})
+const getLaunchOptions = (tempDir) => {
+    const options = {
+        headless: true,
+        userDataDir: tempDir,
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage', // Important pour les serveurs Linux
+            '--disable-gpu',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-extensions',
+            '--disable-plugins',
+            '--single-process=false'
+        ],
+    }
+
+    // Laisser Puppeteer découvrir automatiquement Chrome, mais activer les fallbacks
+    // Ne pas définir executablePath pour laisser Puppeteer chercher lui-même
+    
+    return options
+}
 const totalMoyenneCoeficient = (tab) => {
     console.log(tab)
     if(!tab || tab.length === 0){
