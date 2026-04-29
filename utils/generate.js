@@ -161,7 +161,7 @@ const generateClasseBulletin = async (id_classe) => {
                     padding: 15mm;
                     background: white;
                     
-                    /* ✅ La vraie solution pour forcer une nouvelle page PDF */
+                    /* La vraie solution pour forcer une nouvelle page PDF */
                     break-after: page;        
                     -webkit-column-break-after: page;
                     page-break-after: always;
@@ -231,7 +231,8 @@ const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe
         })
         const browser = await puppeteer.launch({
             headless: true,
-            userDataDir: tempDir
+            userDataDir: tempDir,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
         const page = await browser.newPage()
         await page.setContent(html, { waitUntil: "networkidle0" })
