@@ -178,7 +178,7 @@ const classeEnseignerParEnsignant = async(req,res)=>{
             return res.status(404).json({message:"information non trouvé"})
         }
         const classeEnseigner = classe?.affectation.map(item=>({
-            classe:item.classe, matiere: item.matiere.nom
+            classe:item.classe, matiere: {id:item.matiere.id,nom:item.matiere.nom}
         }))
         return res.status(201).json({message:"liste des classe:", classeEnseigner})
     }catch(err){
@@ -208,11 +208,51 @@ const enseignantStatController = async (req,res)=>{
                 id_classe:{in: classeIds}
             }
         })
-        return res.status(201).json({message:"stat:", nombreClasse, nombreEleve})
+        const nombreMatiere = await prisma.affectation.count({
+            where : {
+                id_prof: matricule
+            }
+        })
+        return res.status(201).json({message:"stat:", nombreClasse, nombreEleve, nombreMatiere})
     }catch(err){
         console.error(err)
         return res.status(500).json({ message: "Erreur serveur", err })
     }
+}
+
+const nombreElevesClasse = async (req, res)=>{
+        if(req.user.user.role !=="ENSEIGNANT"){
+            return res.status(403).json({message:"vous êtes pas un proffesseur"})
+        }
+        const matricule = req.user.profil.matricule
+        try {
+            const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+            const classes = await prisma.affectation.findMany({
+                where:{id_prof:matricule},
+                include:{
+                    classe:true
+                }
+            })
+            const resultat = await Promise.all(
+                classes.map(async(classe)=>{
+                    const effectif = await prisma.inscription.count({
+                        where:{
+                            id_annee_academique:annee.id,
+                            id_classe:classe.id_classe
+                        }
+                    })
+                    return {
+                        name:classe.classe.libelle,
+                        effectif:effectif
+                    }
+                })
+            )
+
+            return res.status(200).json({message:"classe et effectiff", resultat})
+        }catch(err){
+        console.error(err)
+        return res.status(500).json({ message: "Erreur serveur", err })
+        }
 }
 
 module.exports = {
@@ -220,5 +260,6 @@ module.exports = {
     getEnseignantByMatriculeController, 
     classeEnseignerParEnsignant,
     enseignantStatController,
-    enseignantEtablissement
+    enseignantEtablissement,
+    nombreElevesClasse
 }

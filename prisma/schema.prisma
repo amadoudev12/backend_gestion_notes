@@ -93,7 +93,7 @@ model Classe {
 model Matiere {
   id                Int       @id @default(autoincrement())
   nom               String
-  etablissement_id  Int    @unique
+  etablissement_id  Int    
   etablissement     Etablissement @relation(fields: [etablissement_id], references: [id])
   notes             Note[]
   affectation       Affectation[]

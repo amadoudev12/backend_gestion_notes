@@ -149,13 +149,17 @@ const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
         throw new Error('aucun id selectionné')
     }
     const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
-    const inscription = await prisma.inscription.findUnique({where:{
-        matricule_eleve:id,
-        id_annee_academique:annee.id
-    }})
+    const inscription = await prisma.inscription.findUnique({
+        where:{
+            matricule_eleve_id_annee_academique :{
+                matricule_eleve:id,
+                id_annee_academique:annee.id
+            }
+        }
+    })
     try {
         const notes = await prisma.note.findMany({
-            where:{ id_inscription:inscription.id, id_matiere:id_matiere, id_trimestre:id_trimestre },
+            where:{ id_inscription:inscription.id, id_matiere:Number(id_matiere), id_trimestre:id_trimestre },
             select:{
                 valeur:true,
                 coefficient:true,
@@ -169,11 +173,15 @@ const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
                         }
                     }
                 },
-                eleve : {
-                    select:{
-                        matricule:true,
-                        nom:true,
-                        prenom:true
+                inscription :{
+                    include : {
+                        eleve : {
+                            select:{
+                                matricule:true,
+                                nom:true,
+                                prenom:true,
+                            }
+                        }
                     }
                 }
             }
@@ -182,9 +190,9 @@ const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
         notes.forEach(note => {
             const nomMatiere = note.matiere.nom
             const coefMatiere = note.matiere.affectation[0]?.coefficient
-            const matricule = note.eleve.matricule
-            const nom = note.eleve.nom
-            const prenom = note.eleve.prenom
+            const matricule = note.inscription.matricule_eleve
+            const nom = note.inscription.eleve.nom
+            const prenom = note.inscription.eleve.prenom
             if(!matieres[nomMatiere]){
                 matieres[nomMatiere] = {
                     matiere: nomMatiere,
@@ -585,8 +593,8 @@ const meilleureByClasse = async (idClasse)=>{
             const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
             elevesWithMoy.push({
-                nom:eleve.nom,
-                prenom:eleve.prenom,
+                nom:eleve.eleve.nom,
+                prenom:eleve.eleve.prenom,
                 moyenne:moyenneEleve
             })
         }

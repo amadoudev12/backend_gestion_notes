@@ -110,10 +110,10 @@ const getClasseMatiere = async (req, res)=>{
         return res.status(400).json({message:'aucune classe selectionne'})
     }
     try {
-        const matieres = await prisma.enseigner.findMany({
-            where : {id_classe:Number(classe_id)},
+        const matieres = await prisma.affectation.findMany({
+            where : {id_classe: Number(classe_id)},
             include : {
-                matiere : true
+                matiere:true
             }
         })
         return res.status(200).json({
