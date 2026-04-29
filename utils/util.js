@@ -62,8 +62,9 @@ const moyenneE = (tab)=>{
     }
     let total = 0
     tab.forEach(t=>{
-        total += t.moyenneGenerale ?? 0
+        total += isNaN(t.moyenneGenerale) ? 0 : t.moyenneGenerale
     })
+    console.log(total)
     return parseFloat((total / tab.length).toFixed(2))
 }
 
