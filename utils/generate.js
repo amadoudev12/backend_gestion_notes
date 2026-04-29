@@ -56,7 +56,8 @@ const generate = async (matricule) => {
         })
         const browser = await puppeteer.launch({
             headless: true,
-            userDataDir: tempDir
+            userDataDir: tempDir,
+            args: ["--no-sandbox", "--disable-setuid-sandbox"], //pour render
         })
         const page = await browser.newPage()
         await page.setContent(html, { waitUntil: "networkidle0" })
