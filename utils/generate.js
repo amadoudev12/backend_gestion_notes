@@ -5,6 +5,20 @@ const os = require('os')
 const fs = require('fs')
 const { getBulletinInformation, getMention } = require('./util')
 const { prisma } = require('../lib/prisma')
+
+// Fonction pour configurer les options de lancement de Puppeteer
+const getLaunchOptions = (tempDir) => ({
+    headless: true,
+    userDataDir: tempDir,
+    args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Important pour les serveurs Linux
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-default-browser-check'
+    ],
+})
 const totalMoyenneCoeficient = (tab) => {
     console.log(tab)
     if(!tab || tab.length === 0){
@@ -54,11 +68,7 @@ const generate = async (matricule) => {
             distinction,
             rangMatiere
         })
-        const browser = await puppeteer.launch({
-            headless: true,
-            userDataDir: tempDir,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"], //pour render
-        })
+        const browser = await puppeteer.launch(getLaunchOptions(tempDir))
         const page = await browser.newPage()
         await page.setContent(html, { waitUntil: "networkidle0" })
         //chemin du fichier PDF
@@ -179,11 +189,7 @@ const generateClasseBulletin = async (id_classe) => {
             </html>
 `
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            timeout: 60000
-        })
+        const browser = await puppeteer.launch(getLaunchOptions(tempDir))
 
         const page = await browser.newPage()
 
@@ -229,11 +235,7 @@ const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe
             classe:classe,
             infosProf:infosProf
         })
-        const browser = await puppeteer.launch({
-            headless: true,
-            userDataDir: tempDir,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        })
+        const browser = await puppeteer.launch(getLaunchOptions(tempDir))
         const page = await browser.newPage()
         await page.setContent(html, { waitUntil: "networkidle0" })
         const listeFile = path.join(tempDir, 'listeNote.pdf')
