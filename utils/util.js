@@ -62,7 +62,7 @@ const moyenneE = (tab)=>{
     }
     let total = 0
     tab.forEach(t=>{
-        total += t.moyenneGenerale
+        total += t.moyenneGenerale ?? 0
     })
     return parseFloat((total / tab.length).toFixed(2))
 }
@@ -539,7 +539,7 @@ const moyenneEtablissement = async(admin_id)=>{
             return 0
         }
         const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
-                const eleves = await prisma.inscription.findMany({
+        const eleves = await prisma.inscription.findMany({
             where :{
                 id_annee_academique:annee.id,
                 classe:{
@@ -565,12 +565,14 @@ const moyenneEtablissement = async(admin_id)=>{
                 }
             })
         )
+        console.log(moyennesEleves)
         const moyenneEtablissement = moyenneE(moyennesEleves)
         return {
             moyenneEtablissement,
             trimestre:trimestre.libelle
         }
     }catch(err){
+        console.log(err)
         return err
     }
 }
