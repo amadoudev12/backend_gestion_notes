@@ -46,7 +46,7 @@ const getEtablissementByIdAdmin = async (req, res) => {
 
 const moyenneGeneralesEtablissemetEvolution = async (req,res)=> {
     try {
-        const moyennes = await prisma.resultatTrimestre.groupBy({
+        const moyennes = await prisma.bulletin.groupBy({
             by: ['idtrimestre'],
             _avg: {
                 moyenneGenerale: true,
@@ -133,8 +133,8 @@ const moyenneMatieres = async (req, res)=>{
         // console.log(matieres[0].matiere?.notes)
         const moyenneMatieres = matieres.map(mat => {
             const moyMat = moyenne(mat.matiere.notes)
+            // console.log(moyMat)
             const nom = mat.matiere.nom
-
             return {
                 matiere: nom,
                 moyenne: moyMat

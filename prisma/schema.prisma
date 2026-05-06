@@ -56,8 +56,8 @@ model Eleve {
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id])
 
-  inscriptions Inscription[]   // ✅ ajout
-  historique  ResultatTrimestre[]
+  inscriptions Inscription[]   // ajout
+  historique  Bulletin[]
   absence     Absence[]
 }
 
@@ -108,7 +108,7 @@ model Trimestre {
   actif Boolean
   notes        Note[]
   absence Absence[]
-  resultatTrimestre ResultatTrimestre[]
+  resultatTrimestre Bulletin[]
 }
 
 model Note {
@@ -129,31 +129,6 @@ model Note {
   @@index([id_trimestre])
 }
 
-// model Dispenser {
-//   id           Int @id @default(autoincrement())
-//   id_matiere   Int
-//   id_classe    Int
-//   coefficient  Int
-
-//   matiere  Matiere @relation(fields: [id_matiere], references: [id], map: "fk_dispenser_matiere")
-//   classe   Classe  @relation(fields: [id_classe], references: [id], map: "fk_dispenser_classe")
-
-//   @@unique([id_matiere, id_classe])
-// }
-
-// model Enseigner {
-//   id          Int    @id @default(autoincrement())
-//   id_prof     String
-//   id_matiere  Int
-//   id_classe   Int
-
-//   enseignant  Enseignant @relation(fields: [id_prof], references: [matricule], map: "fk_enseigner_prof")
-//   matiere     Matiere    @relation(fields: [id_matiere], references: [id], map: "fk_enseigner_matiere")
-//   classe      Classe     @relation(fields: [id_classe], references: [id], map: "fk_enseigner_classe")
-
-//   @@unique([id_prof, id_matiere, id_classe])
-// }
-
 model Affectation {
   id           Int @id @default(autoincrement())
   id_classe    Int
@@ -167,16 +142,16 @@ model Affectation {
 
   @@unique([id_classe, id_matiere])
 }
-model ResultatTrimestre {
+model Bulletin {
   id               Int      @id @default(autoincrement())
   eleveId          String
   idtrimestre      Int
-  id_annee         Int   // ✅ ajouté
+  id_annee         Int
   moyenneGenerale  Float
   decision         String
   rang             Int
   mention          String?
-
+  fichier_url      String?   //AJOUT IMPORTANT
   eleve       Eleve @relation(fields: [eleveId], references: [matricule])
   trimestre   Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
   annee       AnneeAcademique @relation(fields: [id_annee], references: [id])
@@ -224,7 +199,7 @@ model AnneeAcademique {
   actif         Boolean  @default(false)
 
   inscriptions  Inscription[]
-  resultats     ResultatTrimestre[]
+  resultats     Bulletin[]
 }
 
 model Inscription {

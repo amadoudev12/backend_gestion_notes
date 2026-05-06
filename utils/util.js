@@ -39,21 +39,19 @@ const listeElevesRequest = async (idClasse) => {
 
 
 const moyenne = (tab) => {
-    if(!tab || tab.length === 0){
-        return 0
-    }
-    let total = 0
-    let totalCoef = 0
+    if (!tab || tab.length === 0) return 0;
+
+    let total = 0;
+    let totalCoef = 0;
 
     tab.forEach(t => {
-        if(t.valeur){
-            total += t.valeur * t.coefficient
-        }else{
-            total += t.moyenne * t.coefficient
-        }
-        totalCoef += t.coefficient
-    })
-    return parseFloat((total / totalCoef).toFixed(2))
+        // On vérifie explicitement != null pour accepter 0
+        const val = t.valeur != null ? t.valeur : t.moyenne;
+        total     += val * t.coefficient;
+        totalCoef += t.coefficient;
+    });
+
+    return parseFloat((total / totalCoef).toFixed(2));
 }
 
 const moyenneE = (tab)=>{
@@ -358,9 +356,14 @@ const moyClasse = async (id) => {
             
             const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
-            sum += moyenneEleve
+            console.log(moyenneEleve)
+            if(moyenneEleve){
+                sum += moyenneEleve 
+            }
         }
+        
         const moyenneClasses = parseFloat((sum/eleves.length).toFixed(2))
+        console.log('moy classe:', moyenneClasses)
         return moyenneClasses
     }catch(err){
         console.log("erreur au niveau de la fonction de recuperation de la moyenne",err)

@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const activerTrimestreAutomatique = require('./utils/activerTrimestre')
 const cors = require('cors')

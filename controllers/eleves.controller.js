@@ -3,47 +3,7 @@ const bcrypt = require('bcrypt')
 const { calculerMoyenne, getRang } = require('../utils/util')
 const { generate } = require('../utils/generate')
 const xlsx = require('xlsx')
-// const createEleveController = async(req,res)=>{
-//     const body = req.body
-//     if(!body){
-//         return res.status(400).json({message:'fournissez les donnés'})
-//     }
-//     try{
-//         // const {eleves} = body
-//         for (let eleve of body){
-//             const exixtUser = await prisma.user.findUnique({where:{login:eleve.matricu7}})
-//             const hashPass = await bcrypt.hash(eleve.matricule,10)
-//             const user = await prisma.user.create({
-//                 data : {
-//                     login:eleve.matricule,
-//                     mot_passe:hashPass,
-//                     role:"ELEVE"
-//                 }
-//             })
-//             await prisma.eleve.create({
-//                 data: {
-//                     matricule: eleve.matricule,
-//                     nom: eleve.prenom,
-//                     prenom: eleve.prenom,
-//                     dateNaissance:new Date(eleve.dateNaissance),
-//                     lieuNaissance:eleve.lieuNaissance,
-//                     boursier:eleve.boursier,
-//                     sexe:eleve.sexe,
-//                     affecte:eleve.affecte,
-//                     redoublant:eleve.redoublant,
-//                     idClasse: eleve.idClasse,
-//                     nationalite:eleve.nationalite,
-//                     userId: user.id,
-//                 }
-//             })
-//         }
-//         return res.status(201).json({message:'les eleves ont été enregistré avec succes'})
-//     }catch(err){
-//         console.log(err)
-//         return res.status(500).json({message:"erreur:",err})
-//     }
-// }
-
+const supabase = require('../lib/supabaseClient')
 
 const createEleveController = async (req, res) => {
     const {classe} = req.body;
@@ -218,17 +178,38 @@ const EleveRang = async (req,res)=>{
     }
 }
 
-const bulletinController = async (req, res) => {
-    const matricule = req.user.profil.matricule
+
+
+const getBulletin = async (req, res) => {
     try {
-        const filePath = await generate(matricule)
-        res.download(filePath, 'bulletin.pdf')
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ message: "Erreur lors de la génération du bulletin" })
+        console.log(req.body)
+        const { matricule, classe} = req.body
+        const annee = await prisma.anneeAcademique.findFirst({
+            where:{actif:true},
+            select:{
+                libelle:true
+            }
+        })
+        const trimestre = await prisma.trimestre.findFirst({
+            where : {actif:true},
+            select:{
+                libelle:true
+            }
+        })
+        const filePath = `${annee.libelle}/${trimestre.libelle}/${classe}/${matricule}.pdf`
+        console.log(filePath)
+        const { data, error } = await supabase.storage
+            .from('bulletins')
+            .createSignedUrl(filePath, 60) // lien valide 60 secondes
+        if (error) throw error
+        return res.json({
+            url: data.signedUrl
+        })
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "Erreur récupération bulletin" })
     }
 }
-
 const absenceController = async (req, res) => {
     const body = req.body
     const {config, absences}  = body
@@ -266,6 +247,6 @@ module.exports = {
     getEleveController,
     moyennesController,
     EleveRang,
-    bulletinController,
+    getBulletin,
     absenceController
 }

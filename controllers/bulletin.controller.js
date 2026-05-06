@@ -1,6 +1,9 @@
-const { generateClasseBulletin } = require("../utils/generate")
+const { generateClasseBulletins } = require("../utils/generate")
 
-const getBulletinClasse = async (req, res)=> {
+
+
+
+const genererBulletinClasse = async (req, res)=> {
     if(req.user.user.role !="ADMIN"){
         return res.status(403).json({message:"vous êtes pas un administrateur"})
     }
@@ -9,8 +12,8 @@ const getBulletinClasse = async (req, res)=> {
         return res.status(400).json({message:'veuillez entrez les données'})
     }
     try {
-        const bulletinsClasseFile = await generateClasseBulletin(Number(id_classe))
-        res.download(bulletinsClasseFile, 'bulletin.pdf')
+        const bulletinsClasseFile = await generateClasseBulletins(Number(id_classe))
+        res.status(200).json({"bulletinsClasse": bulletinsClasseFile})
     }catch(err){
         console.log(err)
         res.status(500).json({ message: "Erreur lors de la génération du bulletin" })
@@ -18,5 +21,5 @@ const getBulletinClasse = async (req, res)=> {
 }
 
 module.exports = {
-    getBulletinClasse
+    genererBulletinClasse
 }

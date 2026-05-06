@@ -1,7 +1,7 @@
 const express = require("express")
-const { getBulletinClasse } = require("../controllers/bulletin.controller")
 const VerifyToken = require('../middleware/verifyToken')
+const { genererBulletinClasse } = require("../controllers/bulletin.controller")
 const route = express.Router()
 
-route.get('/:id',VerifyToken, getBulletinClasse)
+route.get('/:id', VerifyToken, genererBulletinClasse)
 module.exports = route
