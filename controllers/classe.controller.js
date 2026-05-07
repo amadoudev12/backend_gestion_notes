@@ -136,6 +136,99 @@ const bestAndBadMoyenneController = async (req, res)=>{
     }
 }
 
+const updateClasse = async (req, res) => {
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+    const idEtablissement = req.user.profil.etablissement.id
+    try {
+        const { id } = req.params;
+        const { nom} = req.body;
+        console.log(id)
+        const classe = await prisma.classe.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!classe) {
+            return res.status(404).json({ message: "classe introuvable" });
+        }
+
+        // Vérifier doublon dans le même établissement
+        const exist = await prisma.classe.findFirst({
+        where: {
+            libelle:nom,
+            idEtablissement:idEtablissement
+        }
+        });
+
+        if (exist && exist.id !== parseInt(id)) {
+        return res.status(400).json({
+            message: "Cette classe existe déjà dans cet établissement"
+        });
+        }
+
+        const updated = await prisma.classe.update({
+        where: { id: parseInt(id) },
+        data: {
+            libelle:nom,
+            idEtablissement:idEtablissement
+        }
+        });
+
+        res.status(200).json(updated);
+
+    } catch (error) {
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+};
+
+
+const deleteClasse = async (req, res) => {
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+    const idEtablissement = req.user.profil.etablissement.id
+    try {
+        const { id } = req.params;
+        // const { nom} = req.body;
+        console.log(id)
+        const classe = await prisma.classe.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!classe) {
+            return res.status(404).json({ message: "classe introuvable" });
+        }
+
+        // Vérifier doublon dans le même établissement
+        // const exist = await prisma.matiere.findFirst({
+        //     where: {
+        //         nom:nom,
+        //         etablissement_id:idEtablissement
+        //     }
+        // });
+        await prisma.affectation.deleteMany({
+            where: { id_classe: parseInt(id) }
+        });
+        const deleteClasse = await prisma.classe.delete({
+            where: { id: parseInt(id) },
+        });
+
+        res.status(200).json({message:"classe supprimé"});
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+};
 
 
 module.exports = {
@@ -144,5 +237,7 @@ module.exports = {
     listeClasseByEtabblissement,
     getClasseMatiere,
     bestAndBadMoyenneController,
-    createClasse
+    createClasse,
+    updateClasse,
+    deleteClasse
 }

@@ -103,10 +103,55 @@ const updateMatiere = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Erreur serveur" });
     }
+}
+
+const deleteMatiere = async (req, res) => {
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+    const idEtablissement = req.user.profil.etablissement.id
+    try {
+        const { id } = req.params;
+        // const { nom} = req.body;
+        console.log(id)
+        const matiere = await prisma.matiere.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!matiere) {
+            return res.status(404).json({ message: "Matière introuvable" });
+        }
+
+        // Vérifier doublon dans le même établissement
+        // const exist = await prisma.matiere.findFirst({
+        //     where: {
+        //         nom:nom,
+        //         etablissement_id:idEtablissement
+        //     }
+        // });
+        await prisma.affectation.deleteMany({
+            where: { id_matiere: parseInt(id) }
+        });
+        const deleteMatiere = await prisma.matiere.delete({
+            where: { id: parseInt(id) },
+        });
+
+        res.status(200).json({message:"matiere supprimé"});
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ message: "Erreur serveur" });
+    }
 };
+
 
 module.exports = {
     createMatiere,
     getAllMatieres,
-    updateMatiere
+    updateMatiere,
+    deleteMatiere
 }

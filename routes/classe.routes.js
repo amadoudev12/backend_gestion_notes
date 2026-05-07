@@ -1,5 +1,5 @@
 const express = require('express')
-const { listeEleveParClasse, listeClasses, listeClasseByEtabblissement, getClasseMatiere, bestAndBadMoyenneController, createClasse } = require('../controllers/classe.controller')
+const { listeEleveParClasse, listeClasses, listeClasseByEtabblissement, getClasseMatiere, bestAndBadMoyenneController, createClasse, updateClasse, deleteClasse } = require('../controllers/classe.controller')
 const route = express.Router()
 const VerifyToken = require('../middleware/verifyToken')
 
@@ -10,4 +10,6 @@ route.post('/create', VerifyToken, createClasse)
 route.get('/classe-matiere/:id', getClasseMatiere)
 route.get('/best-moy/:id', bestAndBadMoyenneController)
 route.get('/liste-classe/:id', listeEleveParClasse)
+route.put('/update/:id', VerifyToken, updateClasse)
+route.delete('/delete/:id', VerifyToken, deleteClasse)
 module.exports = route
