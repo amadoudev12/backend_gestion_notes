@@ -247,8 +247,10 @@ const nombreElevesClasse = async (req, res)=>{
                     }
                 })
             )
-
-            return res.status(200).json({message:"classe et effectiff", resultat})
+            const resultatSansDoublons = resultat.filter((result, index, tableau)=>
+                index === tableau.findIndex(c=> c.name === result.name)
+            )
+            return res.status(200).json({message:"classe et effectiff", resultat:resultatSansDoublons})
         }catch(err){
         console.error(err)
         return res.status(500).json({ message: "Erreur serveur", err })

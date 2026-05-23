@@ -1,8 +1,9 @@
 const { prisma } = require("../lib/prisma")
 const bcrypt = require('bcrypt')
-const { meilleureByClasse, moyenneElevesEtablissement, moyenneEtablissement } = require("../utils/util")
+const { meilleureByClasse, moyenneElevesEtablissement, moyenneEtablissement, NombreEleveFaiblesClasse, NombreEleveFortsClasse, mauvaisByClasse } = require("../utils/util")
 // const level_hash = process.env.level_hash
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const { array } = require("../middleware/uploadsFichier");
 
 /**
  * POST /api/auth/register
@@ -240,6 +241,60 @@ const listePlusFortesMoyennes = async (req, res)=>{
     }
 }
 
+// recupere le nombre d'eleves faibles par clase 
+
+const NombreEleveFaiblesByClasseController = async(req, res)=>{
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    console.log(admin_id)
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+
+    try {
+        const result = await NombreEleveFaiblesClasse(admin_id)
+        if(!Array.isArray(result)){
+            return res.status(500).json({
+                message: "Erreur lors de la récupération des moyennes",
+                data: moyennesEleves
+            })
+        }
+        return res.status(200).json({result})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({message:"erreur lors de la recuperation", err})
+    }
+}
+// recupere le nombre d'eleves forts par clase 
+
+const NombreEleveFortByClasseController = async(req, res)=>{
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    console.log(admin_id)
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+
+    try {
+        const result = await NombreEleveFortsClasse(admin_id)
+        if(!Array.isArray(result)){
+            return res.status(500).json({
+                message: "Erreur lors de la récupération des moyennes",
+                data: moyennesEleves
+            })
+        }
+        return res.status(200).json({result})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({message:"erreur lors de la recuperation", err})
+    }
+}
+
+
 const meilleureByClasseController = async(req, res)=>{
     if(req.user.user.role !="ADMIN"){
         return res.status(403).json({message:"vous êtes pas un administrateur"})
@@ -263,7 +318,37 @@ const meilleureByClasseController = async(req, res)=>{
                 }
             })
         )
-        return res.status(200).json({message:"les 5 meilleurs eleves par classe",resultat})
+        return res.status(200).json({message:"les meilleurs eleves par classe",resultat})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({message:"erreur lors de la recuperation", err})
+    }
+}
+const mauvaisByClasseController = async(req, res)=>{
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const admin_id = req.user.profil.id
+    console.log(admin_id)
+    if(!admin_id){
+        return res.status(400).json({message:'fournissez les donnés'})
+    }
+
+    try {
+        const etablissement = await prisma.etablissement.findUnique({where:{admin_id:admin_id}})
+        const listeClasse = await prisma.classe.findMany({where:{idEtablissement:etablissement.id}})
+        
+        const resultat = await Promise.all(
+            listeClasse.map(async (classe)=>{
+                const mauvaisEleves = await mauvaisByClasse(classe.id)
+                console.log(mauvaisEleves)
+                return {
+                    classe:classe.libelle,
+                    eleves: mauvaisEleves
+                }
+            })
+        )
+        return res.status(200).json({message:"les  eleves faibles par classe",resultat})
     }catch(err){
         console.log(err)
         return res.status(500).json({message:"erreur lors de la recuperation", err})
@@ -275,5 +360,8 @@ module.exports = {
     listePlusFaiblesMoyennes,
     listePlusFortesMoyennes,
     meilleureByClasseController,
-    register
+    mauvaisByClasseController,
+    register,
+    NombreEleveFaiblesByClasseController,
+    NombreEleveFortByClasseController
 }

@@ -9,6 +9,7 @@ const postNote = async (req, res)=>{
     if(!body){
         return res.status(400).json({message:'aucune classe selectionne'})
     }
+    const trimestre = await prisma.trimestre.findFirst({where:{actif:true}})
     const id_matiere = await prisma.matiere.findFirst({where:{nom:config.matiere}, select:{id:true}})
     const anne = await prisma.anneeAcademique.findFirst({where:{actif:true}})
     try{
@@ -24,7 +25,7 @@ const postNote = async (req, res)=>{
             await prisma.note.create({
                 data:{
                     trimestre:{
-                        connect : {id_trimestre:Number(config.trimestre)}
+                        connect : {id_trimestre:Number(trimestre.id_trimestre)}
                     },
                     typeEvaluation:config.type,
                     coefficient:Number(config.coefficient),

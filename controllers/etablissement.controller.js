@@ -131,7 +131,7 @@ const moyenneMatieres = async (req, res)=>{
             }
         })
         // console.log(matieres[0].matiere?.notes)
-        const moyenneMatieres = matieres.map(mat => {
+        const resultat = matieres.map(mat => {
             const moyMat = moyenne(mat.matiere.notes)
             // console.log(moyMat)
             const nom = mat.matiere.nom
@@ -140,7 +140,9 @@ const moyenneMatieres = async (req, res)=>{
                 moyenne: moyMat
             }
         })
-
+        const  moyenneMatieres = resultat.filter((result, index, tableau)=>
+                index === tableau.findIndex(c=> c.matiere === result.matiere)
+            )
         return  res.status(200).json({message:"moyenne par matiere", moyenneMatieres})
     }catch(err){
         console.log(err)

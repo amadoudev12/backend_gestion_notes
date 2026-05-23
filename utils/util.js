@@ -468,7 +468,7 @@ const getBulletinInformation = async (matricule)=>{
     }
 }
 
-// recuperer les eleves bon et mauvais 
+// recuperer les eleves bon et mauvais   recuperer les nombre d'eleve faible de chaque classe 
 const moyenneElevesEtablissement = async (admin_id, type) => {
     try {
         const etablissement = await prisma.etablissement.findUnique({
@@ -507,7 +507,6 @@ const moyenneElevesEtablissement = async (admin_id, type) => {
                 const moyenneGenerale = moyenneMatieres.length
                     ? moyenne(moyenneMatieres)
                     : 0
-
                 return {
                     matricule: eleve.eleve.matricule,
                     nom: eleve.eleve.nom,
@@ -525,6 +524,148 @@ const moyenneElevesEtablissement = async (admin_id, type) => {
         }
 
     } catch (err) {
+        console.log("ERREUR MOYENNE:", err)
+        return []
+    }
+}
+
+
+// recuperer le nombre d'eleve faibles par classe 
+
+const NombreEleveFaiblesClasse = async (admin_id)=>{
+    try {
+        const etablissement = await prisma.etablissement.findUnique({
+            where: { admin_id: admin_id }
+        })
+
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        })
+
+        if (!etablissement) {
+            return []
+        }
+
+        const eleves = await prisma.inscription.findMany({
+            where: {
+                id_annee_academique: annee.id,
+                classe: {
+                    idEtablissement: etablissement.id
+                }
+            },
+            include: {
+                eleve: true,
+                classe: {
+                    select: {
+                        libelle: true
+                    }
+                }
+            }
+        })
+        const moyennes = await Promise.all(
+            eleves.map(async (eleve) => {
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
+
+                const moyenneGenerale = moyenneMatieres.length
+                    ? moyenne(moyenneMatieres)
+                    : 0
+                return {
+                    matricule: eleve.eleve.matricule,
+                    nom: eleve.eleve.nom,
+                    prenom: eleve.eleve.prenom,
+                    classe: eleve.classe.libelle,
+                    moyenne: moyenneGenerale
+                }
+            })
+        )
+        console.log(moyennes)
+        const faibleByClasse = moyennes.reduce((acc, eleve)=>{
+            if(eleve.moyenne < 10){
+                const classeExistante = acc.find(item => item.classe === eleve.classe)
+                if(classeExistante){
+                    classeExistante.nombre++  //nombre d'eleve faible
+                }else{
+                    acc.push({
+                        classe: eleve.classe,
+                        nombre: 1 //nombre d'eleve faible
+                    })
+                }
+            }
+            return acc
+        }, [])
+        console.log(faibleByClasse)
+        return faibleByClasse
+    }catch(err){
+        console.log("ERREUR MOYENNE:", err)
+        return []
+    }
+}
+// recuperer le nombre d'eleve forts par classe 
+
+const NombreEleveFortsClasse = async (admin_id)=>{
+    try {
+        const etablissement = await prisma.etablissement.findUnique({
+            where: { admin_id: admin_id }
+        })
+
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        })
+
+        if (!etablissement) {
+            return []
+        }
+
+        const eleves = await prisma.inscription.findMany({
+            where: {
+                id_annee_academique: annee.id,
+                classe: {
+                    idEtablissement: etablissement.id
+                }
+            },
+            include: {
+                eleve: true,
+                classe: {
+                    select: {
+                        libelle: true
+                    }
+                }
+            }
+        })
+        const moyennes = await Promise.all(
+            eleves.map(async (eleve) => {
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
+
+                const moyenneGenerale = moyenneMatieres.length
+                    ? moyenne(moyenneMatieres)
+                    : 0
+                return {
+                    matricule: eleve.eleve.matricule,
+                    nom: eleve.eleve.nom,
+                    prenom: eleve.eleve.prenom,
+                    classe: eleve.classe.libelle,
+                    moyenne: moyenneGenerale
+                }
+            })
+        )
+        console.log(moyennes)
+        const faibleByClasse = moyennes.reduce((acc, eleve)=>{
+            if(eleve.moyenne >= 10){
+                const classeExistante = acc.find(item => item.classe === eleve.classe)
+                if(classeExistante){
+                    classeExistante.nombre++  //nombre d'eleve fort
+                }else{
+                    acc.push({
+                        classe: eleve.classe,
+                        nombre: 1   //nombre d'eleve fort
+                    })
+                }
+            }
+            return acc
+        }, [])
+        console.log(faibleByClasse)
+        return faibleByClasse
+    }catch(err){
         console.log("ERREUR MOYENNE:", err)
         return []
     }
@@ -598,13 +739,44 @@ const meilleureByClasse = async (idClasse)=>{
         for(let eleve of eleves){
             const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
-            elevesWithMoy.push({
-                nom:eleve.eleve.nom,
-                prenom:eleve.eleve.prenom,
-                moyenne:moyenneEleve
-            })
+            if(moyenneEleve >=10){
+                elevesWithMoy.push({
+                    nom:eleve.eleve.nom,
+                    prenom:eleve.eleve.prenom,
+                    moyenne:moyenneEleve
+                })
+            }
         }
-        return elevesWithMoy.sort((a,b)=> b.moyenne - a.moyenne).slice(0,3)
+        return elevesWithMoy
+    }catch(err){
+        return err
+    }
+}
+const mauvaisByClasse = async (idClasse)=>{
+    try {
+        const eleves = await prisma.inscription.findMany({
+            where :{
+                classe:{
+                    id:idClasse
+                }
+            },
+            include : {
+                eleve:true,
+            }
+        })
+        let elevesWithMoy = []
+        for(let eleve of eleves){
+            const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
+            const moyenneEleve = moyenne(moyenneMatieres)
+            if(moyenneEleve < 10){
+                elevesWithMoy.push({
+                    nom:eleve.eleve.nom,
+                    prenom:eleve.eleve.prenom,
+                    moyenne:moyenneEleve 
+                })
+            }
+        }
+        return elevesWithMoy
     }catch(err){
         return err
     }
@@ -622,5 +794,8 @@ module.exports = {
     moyClasse,
     moyenneElevesEtablissement,
     moyenneEtablissement,
-    meilleureByClasse
+    meilleureByClasse, 
+    NombreEleveFaiblesClasse,
+    NombreEleveFortsClasse,
+    mauvaisByClasse
 }

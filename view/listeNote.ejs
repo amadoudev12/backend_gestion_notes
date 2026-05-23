@@ -302,7 +302,7 @@
         %>
             <tr>
                 <td><%= index + 1 %></td>
-                <td class="nom"><%= eleve[0].infos.nom %></td>
+                <td class="nom"><%= eleve[0].infos.nom %> <%= eleve[0].infos.prenom %></td>
                     <% for (let i = 0; i < maxNotes; i++) { %>
                         <td class="note">
                             <%= (n[i] && n[i].valeur !== undefined) ? n[i].valeur : '' %>
