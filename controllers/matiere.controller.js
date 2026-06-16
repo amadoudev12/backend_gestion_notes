@@ -67,7 +67,6 @@ const updateMatiere = async (req, res) => {
     try {
         const { id } = req.params;
         const { nom} = req.body;
-        console.log(id)
         const matiere = await prisma.matiere.findUnique({
             where: { id: parseInt(id) }
         });
@@ -117,7 +116,6 @@ const deleteMatiere = async (req, res) => {
     try {
         const { id } = req.params;
         // const { nom} = req.body;
-        console.log(id)
         const matiere = await prisma.matiere.findUnique({
             where: { id: parseInt(id) }
         });
@@ -143,7 +141,6 @@ const deleteMatiere = async (req, res) => {
         res.status(200).json({message:"matiere supprimé"});
 
     } catch (error) {
-        console.log(error)
         res.status(500).json({ message: "Erreur serveur" });
     }
 };

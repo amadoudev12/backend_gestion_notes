@@ -4,6 +4,8 @@ const { calculerMoyenne, getRang } = require('../utils/util')
 const { generate } = require('../utils/generate')
 const xlsx = require('xlsx')
 const supabase = require('../lib/supabaseClient')
+const sendEmail = require('../services/sendEmail')
+const generateCertificat = require('../utils/generateCertificat')
 
 const createEleveController = async (req, res) => {
     const {classe} = req.body;
@@ -18,7 +20,7 @@ const createEleveController = async (req, res) => {
     try {
         const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
         const filename = req.file.filename
-        const wb = xlsx.readFile(`./upload/${filename}`)
+        const wb = xlsx.readFile(`./uploads/imports/${filename}`)
         const sheetName = wb.SheetNames[0]
         const sheet = wb.Sheets[sheetName]
         const eleves = xlsx.utils.sheet_to_json(sheet)
@@ -26,6 +28,7 @@ const createEleveController = async (req, res) => {
             let user = await prisma.user.findUnique({
                 where: { login: row.matricule }
             })
+            
             // verifions le user 
                 if (!user) {
                     const hashPass = await bcrypt.hash(row.matricule, 10);
@@ -47,6 +50,7 @@ const createEleveController = async (req, res) => {
                         matricule: row.matricule,
                         nom: row.nom,
                         prenom: row.prenom,
+                        email:row.email,
                         dateNaissance: row.dateNaissance
                             ? new Date(row.dateNaissance)
                             : null,
@@ -59,6 +63,7 @@ const createEleveController = async (req, res) => {
                         userId: user.id
                     }
                 })
+
             }
             //INSCRIPTION 
             await prisma.inscription.create({
@@ -68,6 +73,7 @@ const createEleveController = async (req, res) => {
                     id_annee_academique: Number(annee.id)
                 }
             })
+            await sendEmail(eleve.nom, eleve.email, eleve.matricule, eleve.matricule)
         }
         return res.status(201).json({
             message: "les élèves ont été ajoutés avec succès ✅"
@@ -80,12 +86,13 @@ const createEleveController = async (req, res) => {
     }
 }
 
+
+
 const getAllElevesController = async (req, res)=>{
     try {
         const eleves = await prisma.eleve.findMany()
         return res.json({message:'liste des eleves:', eleves}).status(200)
     }catch(err){
-        console.log('erreur serveur', err)
         return res.json({message:'erreur', err}).status(505)
     }
 }
@@ -153,7 +160,6 @@ const moyennesController = async (req,res)=>{
 }
 
 const EleveRang = async (req,res)=>{
-    console.log(req.user.profil)
     const matricule = req.user.profil.matricule
     // const idClasse = req.user.profil.idClasse
     try{
@@ -182,28 +188,31 @@ const EleveRang = async (req,res)=>{
 
 const getBulletin = async (req, res) => {
     try {
-        console.log(req.body)
         const { matricule, classe} = req.body
         const annee = await prisma.anneeAcademique.findFirst({
             where:{actif:true},
-            select:{
-                libelle:true
-            }
         })
         const trimestre = await prisma.trimestre.findFirst({
             where : {actif:true},
-            select:{
-                libelle:true
+        })
+        // const filePath = `${annee.libelle}/${trimestre.libelle}/${classe}/${matricule}.pdf`
+        // console.log(filePath)
+        // const { data, error } = await supabase.storage
+        //     .from('bulletins')
+        //     .createSignedUrl(filePath, 60) // lien valide 60 secondes
+        // if (error) throw error
+        // console.log(data.signedUrl)
+        const bulletin = await prisma.bulletin.findUnique({
+            where : {
+                eleveId_idtrimestre_id_annee : {
+                    eleveId:matricule,
+                    idtrimestre:trimestre.id_trimestre,
+                    id_annee:annee.id
+                }
             }
         })
-        const filePath = `${annee.libelle}/${trimestre.libelle}/${classe}/${matricule}.pdf`
-        console.log(filePath)
-        const { data, error } = await supabase.storage
-            .from('bulletins')
-            .createSignedUrl(filePath, 60) // lien valide 60 secondes
-        if (error) throw error
         return res.json({
-            url: data.signedUrl
+            url: bulletin.fichier_url
         })
     } catch (err) {
         console.log(err)
@@ -238,7 +247,83 @@ const absenceController = async (req, res) => {
     }
 }
 
-
+const createCertificat = async (req, res)=>{
+    const matricule = req.user.profil.matricule
+    try{
+        const annee = await prisma.anneeAcademique.findFirst({
+            where:{
+                actif:true
+            }
+        })
+        const inscription = await prisma.inscription.findUnique({
+            where : {
+                matricule_eleve_id_annee_academique : {
+                    matricule_eleve:matricule,
+                    id_annee_academique:annee.id
+                }
+            },
+            include:{
+                eleve:true,
+                classe:{
+                    select:{
+                        libelle:true,
+                        etablissement:true
+                    }
+                }
+            }
+        })
+        const signature = await prisma.signature.findFirst({
+            where:{
+                user:{
+                    admin :{
+                        etablissement : {
+                            id:inscription.classe.etablissement.id
+                        }
+                    }
+                }
+            }
+        })
+        if(!inscription){
+            return res.status(404).json({message:"cet eleve n'est pas inscrit"})
+        }
+        let compteur = await prisma.compteurCertificat.findUnique({
+            where:{
+                annee_academique_id:annee.id
+            }
+        })
+        if(!compteur){
+            compteur = await prisma.compteurCertificat.create({
+                data :{
+                    annee_academique_id:annee.id,
+                    compteur:0
+                }
+            })
+        }
+        const nouveauCompteur = compteur.compteur+1
+        // generation du numero du certificat 
+        const numeroCertificat = `CF-${annee.libelle}-${String(nouveauCompteur).padStart(4,'0')}`
+        await prisma.compteurCertificat.update({
+            where:{annee_academique_id:annee.id},
+            data:{
+                compteur:nouveauCompteur
+            }
+        })
+        const certificat = await prisma.certificatFrequentation.create({
+            data :{
+                numero:numeroCertificat,
+                eleve_id:matricule,
+                annee_academique_id:annee.id
+            }
+        })
+        const certificatFile = await generateCertificat(inscription.eleve, annee, certificat,
+            inscription.classe, inscription.classe.etablissement, signature.url
+        )
+        return res.download(certificatFile, 'certificat de frequentation')
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({err})
+    }
+}
 
 module.exports = {
     getAllElevesController,
@@ -248,5 +333,6 @@ module.exports = {
     moyennesController,
     EleveRang,
     getBulletin,
-    absenceController
+    absenceController,
+    createCertificat
 }

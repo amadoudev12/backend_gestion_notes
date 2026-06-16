@@ -11,7 +11,6 @@ const getMention = (moyenne) => {
 
 
 const listeElevesRequest = async (idClasse) => {
-    console.log("id classe",idClasse)
     try {
         const annee = await prisma.anneeAcademique.findFirst({
             where: { actif: true }
@@ -62,7 +61,6 @@ const moyenneE = (tab)=>{
     tab.forEach(t=>{
         total += isNaN(t.moyenneGenerale) ? 0 : t.moyenneGenerale
     })
-    console.log(total)
     return parseFloat((total / tab.length).toFixed(2))
 }
 
@@ -143,78 +141,74 @@ const getNoteFunction = async (id) => {
 }
 
 //recuperation des notes des matieres 
-const getNoteFunctionByMatiere = async (id, id_matiere, id_trimestre) => {
-    if(!id){
-        throw new Error('aucun id selectionné')
-    }
-    const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
-    const inscription = await prisma.inscription.findUnique({
-        where:{
-            matricule_eleve_id_annee_academique :{
-                matricule_eleve:id,
-                id_annee_academique:annee.id
-            }
-        }
-    })
+const getNotesClasseByMatiere = async (
+    idClasse,
+    id_matiere,
+    id_trimestre
+) => {
     try {
-        const notes = await prisma.note.findMany({
-            where:{ id_inscription:inscription.id, id_matiere:Number(id_matiere), id_trimestre:id_trimestre },
-            select:{
-                valeur:true,
-                coefficient:true,
-                matiere : {
-                    select : {
-                        nom:true,
-                        affectation:{
-                            select : {
-                                coefficient:true,
-                            }
-                        }
+        const annee = await prisma.anneeAcademique.findFirst({
+            where: { actif: true }
+        });
+
+        if (!annee) {
+            throw new Error("Aucune année académique active trouvée");
+        }
+
+        const inscriptions = await prisma.inscription.findMany({
+            where: {
+                id_classe: Number(idClasse),
+                id_annee_academique: annee.id
+            },
+            include: {
+                eleve: {
+                    select: {
+                        matricule: true,
+                        nom: true,
+                        prenom: true
                     }
                 },
-                inscription :{
-                    include : {
-                        eleve : {
-                            select:{
-                                matricule:true,
-                                nom:true,
-                                prenom:true,
+                notes: {
+                    where: {
+                        id_matiere: Number(id_matiere),
+                        id_trimestre: id_trimestre
+                    },
+                    include: {
+                        matiere: {
+                            include: {
+                                affectation: {
+                                    select: {
+                                        coefficient: true
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        })
-        const matieres = {}
-        notes.forEach(note => {
-            const nomMatiere = note.matiere.nom
-            const coefMatiere = note.matiere.affectation[0]?.coefficient
-            const matricule = note.inscription.matricule_eleve
-            const nom = note.inscription.eleve.nom
-            const prenom = note.inscription.eleve.prenom
-            if(!matieres[nomMatiere]){
-                matieres[nomMatiere] = {
-                    matiere: nomMatiere,
-                    coefficient_matiere: coefMatiere,
-                    infos : {
-                        matricule:matricule,
-                        nom:nom,
-                        prenom:prenom
-                    },
-                    notes:[],
-                }
-            }
-            matieres[nomMatiere].notes.push({
-                valeur: note.valeur,
-                coefficient: note.coefficient,
-            })
-        })
-        return Object.values(matieres)
-    }catch(err){
-        console.log('erreur au niveau du utils:',err)
-        throw err
+        });
+
+        return inscriptions.map(inscription => {
+            const premiereNote = inscription.notes[0];
+
+            return {
+                matricule: inscription.eleve.matricule,
+                nom: inscription.eleve.nom,
+                prenom: inscription.eleve.prenom,
+                matiere: premiereNote?.matiere?.nom || null,
+                coefficient_matiere:
+                    premiereNote?.matiere?.affectation?.[0]?.coefficient || null,
+                notes: inscription.notes.map(note => ({
+                    valeur: note.valeur,
+                    coefficient: note.coefficient
+                }))
+            };
+        });
+    } catch (err) {
+        console.error("Erreur dans getNoteFunctionByMatiere :", err);
+        throw err;
     }
-}
+};
 //recupere les moyennes des matieres
 const calculerMoyenne = async (id) => {
     const matieres = await getNoteFunction(id)
@@ -230,7 +224,6 @@ const calculerMoyenne = async (id) => {
 
 // calcule du rang 
 const getRang = async (matricule, idClasse)=>{
-    console.log(idClasse)
     const moyennesEleves = []
     try{
         const listeEleves = await listeElevesRequest(idClasse)
@@ -243,6 +236,9 @@ const getRang = async (matricule, idClasse)=>{
                 prenom:eleve.prenom,
                 moyenne: eleveMoy ? Number(moyenne(eleveMoy)) : 0
             })
+        }
+        if(!moyennesEleves){
+            return null
         }
         moyennesEleves.sort((a,b)=> b.moyenne - a.moyenne)
         let rang = null
@@ -329,7 +325,6 @@ const bestAndBadMoyClasse = async(id)=>{
         moyennesClasses.sort((a,b)=> b.moyenne - a.moyenne)
         const bestMoy = moyennesClasses[0]
         const badMoy = moyennesClasses[moyennesClasses.length-1]
-        console.log(badMoy)
         return {
             bestMoy:bestMoy ,
             badMoy:badMoy
@@ -353,17 +348,14 @@ const moyClasse = async (id) => {
         
         let sum = 0
         for(let eleve of eleves){
-            
             const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
             const moyenneEleve = moyenne(moyenneMatieres)
-            console.log(moyenneEleve)
             if(moyenneEleve){
                 sum += moyenneEleve 
             }
         }
         
         const moyenneClasses = parseFloat((sum/eleves.length).toFixed(2))
-        console.log('moy classe:', moyenneClasses)
         return moyenneClasses
     }catch(err){
         console.log("erreur au niveau de la fonction de recuperation de la moyenne",err)
@@ -396,19 +388,6 @@ const getBulletinInformation = async (matricule)=>{
                 id:idEtablissement
             }
         })
-        // const enseignants = await prisma.aff.findMany({
-        //     where : {
-        //         id_classe : eleve.classe.id
-        //     },
-        //     include : {
-        //         enseignant : {
-        //             select : {
-        //                 nom:true,
-        //                 prenom:true
-        //             }
-        //         }
-        //     }
-        // })
         const enseignants = await prisma.affectation.findMany({
             where:{
                 id_classe:eleve.classe.id
@@ -417,11 +396,13 @@ const getBulletinInformation = async (matricule)=>{
                 enseignant:{
                     select:{
                         nom:true,
-                        prenom:true
+                        prenom:true,
+                        userId:true
                     }
                 }
             }
         })
+        // enseignants.map(ens=>{ens.enseignant.})
         const matieres = await calculerMoyenne(matricule)
         const matiereAvecProf = await Promise.all(
                 matieres.map(async (m) => {
@@ -441,7 +422,7 @@ const getBulletinInformation = async (matricule)=>{
                         id_matiere:matiereId.id
                     },
                     include:{
-                        enseignant: {select:{nom:true, prenom:true}}
+                        enseignant: true
                     }
                 })
                 return {
@@ -453,7 +434,19 @@ const getBulletinInformation = async (matricule)=>{
         const moyenneGenerale = moyenne(matieres)
         const rang = await getRang(matricule, eleve.classe.id)
         const rangMatiere = await getRangParMatiere(matricule, eleve.classe.id)
-        console.log(rangMatiere)
+        // const matieres = await calculerMoyenne(matricule)
+
+        if (!matieres.length) {
+            return { 
+                eleveInfo: eleve,
+                matiere: [],
+                moyenneGenerale: 0,
+                rang: null,
+                etablissement,
+                enseignants,
+                rangMatiere: []
+            }
+        }
         return{
             eleveInfo:eleve,
             matiere:Object.values(matiereAvecProf),
@@ -578,7 +571,6 @@ const NombreEleveFaiblesClasse = async (admin_id)=>{
                 }
             })
         )
-        console.log(moyennes)
         const faibleByClasse = moyennes.reduce((acc, eleve)=>{
             if(eleve.moyenne < 10){
                 const classeExistante = acc.find(item => item.classe === eleve.classe)
@@ -593,7 +585,6 @@ const NombreEleveFaiblesClasse = async (admin_id)=>{
             }
             return acc
         }, [])
-        console.log(faibleByClasse)
         return faibleByClasse
     }catch(err){
         console.log("ERREUR MOYENNE:", err)
@@ -648,7 +639,6 @@ const NombreEleveFortsClasse = async (admin_id)=>{
                 }
             })
         )
-        console.log(moyennes)
         const faibleByClasse = moyennes.reduce((acc, eleve)=>{
             if(eleve.moyenne >= 10){
                 const classeExistante = acc.find(item => item.classe === eleve.classe)
@@ -663,7 +653,6 @@ const NombreEleveFortsClasse = async (admin_id)=>{
             }
             return acc
         }, [])
-        console.log(faibleByClasse)
         return faibleByClasse
     }catch(err){
         console.log("ERREUR MOYENNE:", err)
@@ -710,7 +699,7 @@ const moyenneEtablissement = async(admin_id)=>{
                 }
             })
         )
-        console.log(moyennesEleves)
+
         const moyenneEtablissement = moyenneE(moyennesEleves)
         return {
             moyenneEtablissement,
@@ -789,7 +778,7 @@ module.exports = {
     getBulletinInformation, 
     getRang,
     getMention,
-    getNoteFunctionByMatiere,
+    getNotesClasseByMatiere,
     bestAndBadMoyClasse,
     moyClasse,
     moyenneElevesEtablissement,

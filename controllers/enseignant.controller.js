@@ -21,11 +21,10 @@ const createEnseignantController = async (req, res) => {
         });
 
         const filename = req.file.filename;
-        const wb = xlsx.readFile(`./upload/${filename}`);
+        const wb = xlsx.readFile(`./uploads/imports/${filename}`);
         const sheetName = wb.SheetNames[0];
         const sheet = wb.Sheets[sheetName];
         const enseignants = xlsx.utils.sheet_to_json(sheet);
-        console.log(enseignants)
         for (let enseignant of enseignants) {
 
             //sécuriser matricule
@@ -65,6 +64,7 @@ const createEnseignantController = async (req, res) => {
                         matricule: matricule,
                         nom: enseignant.nom,  
                         prenom: enseignant.prenom,
+                        email:enseignant.email,
                         userId: user.id
                     }
                 });
@@ -110,7 +110,6 @@ const enseignantEtablissement = async (req, res)=>{
                 enseignant:true
             }
         })
-        // console.log(enseignant)
         return res.status(200).json({enseignants})
     }catch (err) {
         console.log(err);
@@ -160,7 +159,6 @@ const classeEnseignerParEnsignant = async(req,res)=>{
         return res.status(403).json({message:"vous êtes pas un proffesseur"})
     }
     const matricule = req.user.profil.matricule
-    console.log(matricule)
     try{
         const classe = await prisma.enseignant.findUnique({
             where:{matricule:matricule},
@@ -173,7 +171,6 @@ const classeEnseignerParEnsignant = async(req,res)=>{
                 }
             }
         })
-        console.log(classe)
         if(!classe){
             return res.status(404).json({message:"information non trouvé"})
         }
@@ -192,7 +189,6 @@ const enseignantStatController = async (req,res)=>{
             return res.status(403).json({message:"vous êtes pas un proffesseur"})
         }
         const matricule = req.user.profil.matricule
-        console.log(matricule)
         const nombreClasse = await prisma.affectation.count({
             where : {id_prof:matricule}
         })

@@ -11,7 +11,6 @@ const activerTrimestreAutomatique = async () => {
         }
         })
         if (!trimestreActuel) {
-        console.log("Aucun trimestre ne correspond à la date actuelle")
         return
         }
 
@@ -25,8 +24,6 @@ const activerTrimestreAutomatique = async () => {
             where: { id_trimestre: trimestreActuel.id_trimestre },
             data: { actif: true }
         })
-
-        console.log("Trimestre activé :", trimestreActuel.libelle)
 
     } catch (error) {
         console.log("Erreur activation automatique :", error)

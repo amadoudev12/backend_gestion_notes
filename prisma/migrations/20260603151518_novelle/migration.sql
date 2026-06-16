@@ -4,8 +4,22 @@ CREATE TABLE `User` (
     `login` VARCHAR(191) NOT NULL,
     `mot_passe` VARCHAR(191) NOT NULL,
     `role` ENUM('ADMIN', 'ENSEIGNANT', 'ELEVE') NOT NULL,
+    `firstLogin` BOOLEAN NOT NULL DEFAULT true,
+    `signatureComplete` BOOLEAN NOT NULL DEFAULT false,
 
     UNIQUE INDEX `User_login_key`(`login`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Signature` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `url` VARCHAR(191) NOT NULL,
+    `user_id` INTEGER NOT NULL,
+    `createAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updateAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `Signature_user_id_key`(`user_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -14,6 +28,7 @@ CREATE TABLE `Eleve` (
     `matricule` VARCHAR(191) NOT NULL,
     `nom` VARCHAR(191) NOT NULL,
     `prenom` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
     `dateNaissance` DATETIME(3) NULL,
     `lieuNaissance` VARCHAR(191) NULL,
     `sexe` ENUM('M', 'F') NULL,
@@ -33,6 +48,7 @@ CREATE TABLE `Enseignant` (
     `matricule` VARCHAR(191) NOT NULL,
     `nom` VARCHAR(191) NOT NULL,
     `prenom` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
     `userId` INTEGER NOT NULL,
 
     UNIQUE INDEX `Enseignant_userId_key`(`userId`),
@@ -188,6 +204,9 @@ CREATE TABLE `EnseignantEtablissement` (
     UNIQUE INDEX `EnseignantEtablissement_enseignant_id_etablissement_id_key`(`enseignant_id`, `etablissement_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `Signature` ADD CONSTRAINT `Signature_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Eleve` ADD CONSTRAINT `Eleve_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

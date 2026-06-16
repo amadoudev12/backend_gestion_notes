@@ -59,7 +59,6 @@ const createClasse = async (req, res) => {
 
 const listeEleveParClasse = async (req,res) => {
     const classe_id = req.params.id
-    console.log(classe_id)
     if(!classe_id){
         return res.status(400).json({message:'aucune classe selectionne'})
     }
@@ -105,7 +104,6 @@ const listeClasseByEtabblissement = async (req, res)=>{
 
 const getClasseMatiere = async (req, res)=>{
     const classe_id = req.params.id
-    console.log(classe_id)
     if(!classe_id){
         return res.status(400).json({message:'aucune classe selectionne'})
     }
@@ -148,7 +146,6 @@ const updateClasse = async (req, res) => {
     try {
         const { id } = req.params;
         const { nom} = req.body;
-        console.log(id)
         const classe = await prisma.classe.findUnique({
             where: { id: parseInt(id) }
         });
@@ -199,7 +196,6 @@ const deleteClasse = async (req, res) => {
     try {
         const { id } = req.params;
         // const { nom} = req.body;
-        console.log(id)
         const classe = await prisma.classe.findUnique({
             where: { id: parseInt(id) }
         });
@@ -225,7 +221,6 @@ const deleteClasse = async (req, res) => {
         res.status(200).json({message:"classe supprimé"});
 
     } catch (error) {
-        console.log(error)
         res.status(500).json({ message: "Erreur serveur" });
     }
 };

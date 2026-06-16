@@ -202,22 +202,19 @@
 </head>
 <body>
 
-<% 
-    const now = new Date();
-    const day = now.getDate();
-    const month = now.getMonth() + 1; // Les mois commencent à 0
-    const year = now.getFullYear();
-    const dateDay = `${day}/${month}/${year}`;
+    <%
+        const currentDate = new Date();
+        const dateDay = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
 
-    let maxNotes = notes[0][0].notes.length;
+        // sécurisation
+        let maxNotes = 0;
 
-    notes.forEach((noteEleve) => {
-        if (noteEleve[0].notes.length > maxNotes) {
-            maxNotes = noteEleve[0].notes.length;
-        }
-    });
-%>
-    
+        notes.forEach(eleve => {
+            const n = eleve.notes || [];
+            if (n.length > maxNotes) maxNotes = n.length;
+        });
+    %>
+
 <div class="container">
 
     <div class="print-btn">
@@ -226,50 +223,32 @@
 
     <!-- EN-TÊTE -->
     <div class="header-row">
-        <!-- <div class="logo-block">
-            <div class="logo-title">HETEC</div>
-            <div class="logo-sub">ÉCOLE SUPÉRIEURE DES</div>
-        </div> -->
-
         <div class="center-title">
-            <h2>FICHE DE NOTES <%= classe %> </h2>  
+            <h2>FICHE DE NOTES <%= classe %></h2>
         </div>
-
-        <!-- <div class="logo-block">
-            <div class="logo-title">Logo</div>
-            <div class="logo-sub"></div>
-        </div> -->
     </div>
 
-    <!-- INFOS DOCUMENT -->
+    <!-- INFOS -->
     <div class="info-section">
         <div class="info-row">
             <div class="info-cell">
-                <span class="label">ministre de l'éducation nationale et de l'alphabétisation</span>
-            </div>
-            <div class="info-cell">
                 <span class="label">Année Scolaire :</span>
-                <span class="value"> 2025 - 2026</span>
+                <span class="value">2025 - 2026</span>
             </div>
-        </div>
-        <div class="info-row">
             <div class="info-cell">
                 <span class="label">Matière :</span>
-                <span class="value"> <%= matiere %></span>
-            </div>
-            <div class="info-cell">
-                <span class="label">Trimestre: </span>
-                <span class="value">  <%= trimestre %> </span>
+                <span class="value"><%= matiere %></span>
             </div>
         </div>
+
         <div class="info-row">
-            <div class="info-cell" style="flex:2;">
-                <span class="label">Établissement :</span>
-                <span class="value"><%= etablissement %></span>
+            <div class="info-cell">
+                <span class="label">Trimestre :</span>
+                <span class="value"><%= trimestre %></span>
             </div>
             <div class="info-cell">
-                <span class="label">Classe :</span>
-                <span class="value"> <%= classe %> </span>
+                <span class="label">Établissement :</span>
+                <span class="value"><%= etablissement %></span>
             </div>
         </div>
     </div>
@@ -278,51 +257,58 @@
     <table>
         <thead>
             <tr>
-                <th style="width:25px;">N°</th>
-                <th style="min-width:160px;">Nom et Prénoms</th>
-                <% for (let i=1; i<= maxNotes; i++){%>
-                        <th class="note">Note <%= i %> </th>
-                <% }%>
-                <th style="min-width:55px;">Moy /20</th>
-                <th style="min-width:70px;">Signature</th>
-                <th style="min-width:90px;">Contact</th>
+                <th>N°</th>
+                <th>Nom et Prénoms</th>
+
+                <% for (let i = 0; i < maxNotes; i++) { %>
+                    <th>Note <%= i + 1 %></th>
+                <% } %>
+
+                <th>Moy /20</th>
+                <th>Signature</th>
+                <th>Contact</th>
             </tr>
         </thead>
+
         <tbody>
         <% notes.forEach((eleve, index) => {
-            const n = eleve[0].notes || [];
-            let total = 0, totalCoef = 0;
+
+            const n = eleve.notes || [];
+
+            let total = 0;
+            let coef = 0;
+
             n.forEach(note => {
-                if (note && note.valeur !== undefined) {
-                    total += note.valeur * (note.coefficient || 1);
-                    totalCoef += (note.coefficient || 1);
-                }
+                const valeur = note?.valeur || 0;
+                const c = note?.coefficient || 1;
+
+                total += valeur * c;
+                coef += c;
             });
-            const moyenne = totalCoef > 0 ? (total / totalCoef).toFixed(2) : '';
+
+            const moyenne = coef ? (total / coef).toFixed(2) : '';
         %>
+
             <tr>
                 <td><%= index + 1 %></td>
-                <td class="nom"><%= eleve[0].infos.nom %> <%= eleve[0].infos.prenom %></td>
-                    <% for (let i = 0; i < maxNotes; i++) { %>
-                        <td class="note">
-                            <%= (n[i] && n[i].valeur !== undefined) ? n[i].valeur : '' %>
-                        </td>
-                    <% } %>
+
+                <td class="nom">
+                    <%= eleve.nom || '' %>
+                    <%= eleve.prenom || '' %>
+                </td>
+
+                <% for (let i = 0; i < maxNotes; i++) { %>
+                    <td class="note">
+                        <%= n[i]?.valeur || '0' %>
+                    </td>
+                <% } %>
+
                 <td class="moyenne"><%= moyenne %></td>
                 <td class="signature-cell"></td>
                 <td class="contact"></td>
             </tr>
-        <% }) %>
 
-        <!-- Lignes vides si moins de 34 élèves -->
-        <!-- <% for (let i = notes.length; i < 34; i++) { %>
-            <tr>
-                <td><%= i + 1 %></td>
-                <td class="nom">&nbsp;</td>
-                <td></td><td></td><td></td><td></td>
-                <td></td><td class="signature-cell"></td><td></td>
-            </tr>
-        <% } %> -->
+        <% }) %>
         </tbody>
     </table>
 
@@ -331,13 +317,20 @@
         <div class="date-line">
             Fait à Abidjan, le <%= dateDay %>
         </div>
+
         <div class="prof-sig">
-            <p>Nom et Signature du Professeur :</p>
+            <p>Signature du Professeur :</p>
             <p><%= infosProf %></p>
-            <div style="width:200px; border-bottom:1px solid #000; margin:0 auto;"></div>
+
+            <div style="width:200px; border-bottom:1px solid #000; margin:0 auto;">
+                <% if (imageUrl) { %>
+                    <img src="<%= baseurl + imageUrl %>" style="max-width:150px;">
+                <% } %>
+            </div>
         </div>
     </div>
 
 </div>
+
 </body>
 </html>

@@ -15,7 +15,6 @@ const genererBulletinClasse = async (req, res)=> {
         const bulletinsClasseFile = await generateClasseBulletins(Number(id_classe))
         res.status(200).json({"bulletinsClasse": bulletinsClasseFile})
     }catch(err){
-        console.log(err)
         res.status(500).json({ message: "Erreur lors de la génération du bulletin" })
     }
 }

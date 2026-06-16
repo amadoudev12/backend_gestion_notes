@@ -1,0 +1,234 @@
+{
+    certificat: {
+        numero: "CERT-2026-0001"
+    },
+
+    eleve: {
+        matricule: "EL001",
+        nom: "DIALLO",
+        prenom: "Amadou",
+        date_naissance: "12/05/2005",
+        lieu_naissance: "Conakry"
+    },
+
+    classe: {
+        nom: "BTS 2 IDA"
+    },
+
+    anneeAcademique: {
+        libelle: "2025-2026"
+    },
+
+    directeur: {
+        nom_complet: "Mamadou Bah"
+    },
+
+    etablissement: {
+        nom: "HETEC",
+        adresse: "Conakry",
+        ville: "Conakry",
+        logo: "https://..."
+    },
+
+    signatureDirecteur: "data:image/png;base64,...",
+
+    qrCode: "data:image/png;base64,...",
+
+    dateEmission: "06 Juin 2026"
+}
+
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Certificat de fréquentation</title>
+
+    <style>
+        body {
+            font-family: "Times New Roman", serif;
+            padding: 50px;
+            line-height: 1.8;
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+        }
+
+        .etablissement {
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .titre {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 50px 0;
+        }
+
+        .contenu {
+            font-size: 18px;
+            text-align: justify;
+        }
+
+        .nom-eleve {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .signature {
+            margin-top: 80px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .directeur {
+            text-align: center;
+            width: 250px;
+        }
+
+        .signature-img {
+            width: 150px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .qr {
+            width: 100px;
+            height: 100px;
+        }
+
+        .numero {
+            text-align: right;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="numero">
+        N° <%= certificat.numero %>
+    </div>
+
+    <div class="header">
+
+        <% if(etablissement.logo){ %>
+            <img src="<%= etablissement.logo %>" class="logo">
+        <% } %>
+
+        <div class="etablissement">
+            <%= etablissement.nom %>
+        </div>
+
+        <div>
+            <%= etablissement.adresse %>
+        </div>
+
+    </div>
+
+    <div class="titre">
+        CERTIFICAT DE FRÉQUENTATION
+    </div>
+
+    <div class="contenu">
+
+        Je soussigné(e),
+        <strong><%= etablissement.directeur %></strong>,
+        Directeur(trice) de l'établissement
+        <strong><%= etablissement.nom %></strong>,
+        certifie que :
+
+        <br><br>
+
+        <span class="nom-eleve">
+            <%= eleve.nom %> <%= eleve.prenom %>
+        </span>
+
+        <br>
+
+        Matricule :
+        <strong><%= eleve.matricule %></strong>
+
+        <br>
+
+        Né(e) le :
+        <strong><%= eleve.date_naissance %></strong>
+
+        à
+        <strong><%= eleve.lieu_naissance %></strong>
+
+        <br>
+
+        Est régulièrement inscrit(e) dans notre établissement en classe de :
+
+        <strong>
+            <%= classe.libelle %>
+        </strong>
+
+        pour l'année académique :
+
+        <strong>
+            <%= anneeAcademique.libelle %>
+        </strong>.
+
+        <br><br>
+
+        Le présent certificat lui est délivré pour servir et valoir ce que de droit.
+
+    </div>
+
+    <div class="signature">
+
+        <div>
+            Fait à <%= etablissement.adresse %>,
+            le <%= certificat.date_emission %>
+        </div>
+
+        <div class="directeur">
+
+            <!-- <% if(signatureDirecteur){ %>
+                <img src="<%= signatureDirecteur %>" class="signature-img">
+            <% } %> -->
+
+            <div>
+                <strong>Le Directeur</strong>
+            </div>
+
+            <div>
+                <%= etablissement.directeur %>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- <% if(qrCode){ %>
+        <div class="footer">
+            <img src="<%= qrCode %>" class="qr">
+            <div>Vérification du certificat</div>
+        </div>
+    <% } %> -->
+
+</body>
+
+</html>

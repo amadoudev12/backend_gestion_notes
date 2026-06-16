@@ -288,9 +288,9 @@ const getLaunchOptions = async () => {
 }
 
 const totalMoyenneCoeficient = (tab) => {
-    console.log(tab)
+    // console.log("tab:",tab)
     if(!tab || tab.length === 0){
-        throw new Error('aucune note')
+        return 0
     }
     let total = 0
     tab.forEach(t => {
@@ -314,26 +314,38 @@ const generate = async (matricule) => {
     fs.mkdirSync(tempDir, { recursive: true })
     let page;
     try {
+        const anneeAcademique = await prisma.anneeAcademique.findFirst({where:{actif:true}})
         const trimestre = await prisma.trimestre.findFirst({
             where : { actif: true }
         })
         const { eleveInfo, matiere, moyenneGenerale, rang, enseignants, etablissement, rangMatiere } = await getBulletinInformation(matricule)
+        const enseignantWithSignatures = await Promise.all(
+            enseignants.map(async (ens) => {
+                const pathName = await prisma.signature.findUnique({
+                    where : {
+                        user_id:ens.enseignant.userId
+                    }
+                })
+                return pathName.url
+            })
+        )
         const decision = moyenneGenerale >= 10 ? "Admis" : "Double"
         const distinction = Distinction(moyenneGenerale)
         const fichier = path.join(__dirname, '../view/bulletin.ejs')
-        console.log('eleve info:', eleveInfo)
+        const baseUrl = process.env.BASE_URL
         const html = await ejs.renderFile(fichier, {
             eleve: eleveInfo,
             matiere,
             moyenneGenerale:moyenneGenerale ?? 0,
             rang,
             decision,
-            enseignants,
+            enseignantWithSignatures,
             etablissement,
             trimestre,
             totalMoyenneCoeficient: totalMoyenneCoeficient(matiere),
             distinction,
-            rangMatiere
+            rangMatiere,
+            baseurl:baseUrl
         })
         const browser = await getBrowserFromPool()
         page = await browser.newPage()
@@ -348,11 +360,16 @@ const generate = async (matricule) => {
                 printBackground: true,
                 margin: { top: '20mm', bottom: "20mm", left: "10mm", right: "10mm" }
         })
-        const annee = "2025-2026" // récupère dynamiquement si possible
+        if(!fs.existsSync('uploads/bulletins')){
+            fs.mkdirSync('uploads/bulletins')
+        }
+        const annee = anneeAcademique.libelle  // récupère dynamiquement si possible
         const trimestreLibelle = trimestre.libelle // ex: T1
         const classe = eleveInfo.classe || "inconnu"
         const fileName = `${matricule}.pdf`
-        const chemin = `${annee}/${trimestreLibelle}/${classe.libelle}/${fileName}`
+        // const chemin = `${annee}/${trimestreLibelle}/${classe.libelle}/${fileName}`
+        const filePath = path.join(__dirname,'../uploads/bulletins', fileName)
+        await fs.promises.writeFile(filePath, pdfBuffer)
         await new Promise(resolve => setTimeout(resolve, 500))
         try {
             if (page && !page.isClosed()) {
@@ -362,18 +379,19 @@ const generate = async (matricule) => {
             console.log("Page déjà fermée, ignore :", e.message)
         }
         // upload vers supabase
-        const { data, error } = await supabase.storage
-            .from("bulletins")
-            .upload(chemin, pdfBuffer, {
-                contentType: "application/pdf",
-                upsert: true
-            })
+        // const { data, error } = await supabase.storage
+        //     .from("bulletins")
+        //     .upload(chemin, pdfBuffer, {
+        //         contentType: "application/pdf",
+        //         upsert: true
+        //     })
 
-        if (error) {
-            console.error("Erreur upload :", error)
-            throw error
-        }
+        // if (error) {
+        //     console.error("Erreur upload :", error)
+        //     throw error
+        // }
         await browser.close()
+        const relativePath = `uploads/bulletins/${fileName}`
         await prisma.bulletin.upsert({
             where : {
                 eleveId_idtrimestre_id_annee:{
@@ -383,7 +401,7 @@ const generate = async (matricule) => {
                 }
             },
             update : {
-                fichier_url: chemin
+                fichier_url: relativePath
             },
             create : {
                 eleveId: matricule,
@@ -393,13 +411,11 @@ const generate = async (matricule) => {
                 decision,
                 rang,
                 mention: distinction,
-                fichier_url: chemin
+                fichier_url: relativePath
             }
         })
-        console.log("Bulletin généré avec succès :")
-        return chemin
+        return relativePath
     } catch (err) {
-        console.log("erreur au niveau de la generation du pdf", err)
         if (page) {
             try { await page.close() } catch (e) { console.error("Erreur fermeture page :", e) }
         }
@@ -439,13 +455,30 @@ const generateClasseBulletins = async (id_classe) => {
     return results
 }
 
-const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe, infosProf) => {
-    console.log('notes recu', classe)
+const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe, infosProf, profUserId) => {
     const tempDir = path.join(os.tmpdir(), 'puppeteer-session-' + Date.now())
     fs.mkdirSync(tempDir, { recursive: true })
-
-    let page;
+    // const formattedNotes = notes.map(eleve => {
+    //     return {
+    //         infos: eleve[0]?.infos || {},
+    //         notes: eleve[0]?.notes || []
+    //     }
+    // })
+    let page
     try {
+        // const pathName = `signature/${profUserId}.png`
+        // console.log('pathname',pathName)
+        // const { data, error } = await supabase
+        //         .storage
+        //         .from('signatures')
+        //         .createSignedUrl(pathName, 3600);
+        const signature = await prisma.signature.findUnique({
+            where: {
+                user_id:profUserId
+            }
+        })
+        console.log(profUserId)
+        const baseUrl = process.env.BASE_URL
         const fichier = path.join(__dirname, '../view/listeNote.ejs')
         const html = await ejs.renderFile(fichier, {
             notes,
@@ -453,7 +486,9 @@ const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe
             etablissement,
             trimestre,
             classe,
-            infosProf
+            infosProf,
+            imageUrl:signature.url,
+            baseurl:baseUrl
         })
         
         const browser = await getBrowserFromPool()
@@ -465,8 +500,6 @@ const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe
         await new Promise(resolve => setTimeout(resolve, 3000))
         
         const listeFile = path.join(tempDir, 'listeNote.pdf')
-        console.log("Fichier généré :", listeFile)
-        
         await page.pdf({
             path: listeFile,
             format: 'A4',
@@ -476,7 +509,6 @@ const generateFicheNote = async(notes, matiere, etablissement, trimestre, classe
         await new Promise(resolve => setTimeout(resolve, 500))
         await page.close()
         
-        console.log("PDF généré avec succès :", listeFile)
         return listeFile
     } catch(err) {
         console.error("Erreur génération PDF :", err)

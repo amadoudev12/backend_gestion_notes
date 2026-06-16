@@ -26,7 +26,6 @@ const ajouterAffectation = async (req, res) => {
         });
         res.status(201).json(affectation);
     } catch (error) {
-        console.log(error)
         res.status(500).json({ message: error.message });
     }
 }

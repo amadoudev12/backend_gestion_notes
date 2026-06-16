@@ -1,4 +1,5 @@
 require('dotenv').config()
+const path = require('path')
 const express = require('express')
 const activerTrimestreAutomatique = require('./utils/activerTrimestre')
 const cors = require('cors')
@@ -7,6 +8,8 @@ const port = process.env.PORT
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
+app.use("/uploads", express.static('uploads'))
+
 
 activerTrimestreAutomatique()
 app.use('/eleves', require('./routes/eleves.route'))
@@ -21,4 +24,4 @@ app.use('/bulletin', require('./routes/bulletin.route'))
 app.use('/affectation', require("./routes/affectation.route"))
 app.use('/matieres', require('./routes/matieres.route'))
 
-app.listen(port,()=>console.log('server on'))
+app.listen(port,()=>{console.log("server on")})

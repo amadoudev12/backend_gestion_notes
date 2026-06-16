@@ -22,7 +22,6 @@ const postEtablissement = async (req, res) => {
         })
         return res.status(201).json({message:"etablissement crée"})
     }catch(err){
-        console.log(err)
         return res.status(500).json("erreur lors de l'enregistrement")
     }
 }
@@ -37,7 +36,6 @@ const getEtablissementByIdAdmin = async (req, res) => {
             return res.status(200).json({message:"etatblissement", etablissement})
         }
     }catch(err){
-        console.log(err)
         return res.status(500).json(err)
     }
 }

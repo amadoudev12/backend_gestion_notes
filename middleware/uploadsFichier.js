@@ -1,19 +1,20 @@
 const fs = require('fs')
 const multer = require('multer')
 const {extname} = require('path')
-if(!fs.existsSync('./upload')){
-    fs.mkdirSync('./upload')
+
+if(!fs.existsSync('./uploads')){
+    fs.mkdirSync('./uploads')
 }
 
 //configuration de multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'upload/')
+        cb(null, 'uploads/imports')
     },
     filename: (req,file,cb) => {
         const ext = extname(file.originalname)
         const nomFichier = req.body.nom
-        ?.toLowerCase()
+        ?.toLowerCase() 
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '')
         const uniqueFixe = Date.now() 
@@ -21,5 +22,6 @@ const storage = multer.diskStorage({
         cb(null, filename)
     }
 })
+
 const upload = multer({storage})
 module.exports =  upload
