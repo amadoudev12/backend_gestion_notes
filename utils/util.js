@@ -39,7 +39,6 @@ const listeElevesRequest = async (idClasse) => {
 
 const moyenne = (tab) => {
     if (!tab || tab.length === 0) return 0;
-
     let total = 0;
     let totalCoef = 0;
 
@@ -209,7 +208,8 @@ const getNotesClasseByMatiere = async (
         throw err;
     }
 };
-//recupere les moyennes des matieres
+
+//recupere les moyennes des matieres d'un eleve
 const calculerMoyenne = async (id) => {
     const matieres = await getNoteFunction(id)
     return matieres.map(m => ({
@@ -219,8 +219,6 @@ const calculerMoyenne = async (id) => {
         appreciation: getMention(moyenne(m.notes))
     }))
 }
-
-
 
 // calcule du rang 
 const getRang = async (matricule, idClasse)=>{
@@ -302,37 +300,6 @@ const getRangParMatiere = async (matricule, idClasse) => {
     }
 }
 
-
-// meilleure moyenne d'une classe 
-
-const bestAndBadMoyClasse = async(id)=>{
-    try {
-        const eleves = await prisma.eleve.findMany({
-            where:{
-                idClasse:Number(id)
-            }
-        })
-        let moyennesClasses = []
-        for(let eleve of eleves){
-            const moyenneMatieres = await calculerMoyenne(eleve.matricule)
-            const moyenneEleve = moyenne(moyenneMatieres)
-            moyennesClasses.push({
-                matricule:eleve.matricule,
-                moyenne: moyenneEleve
-            })
-        }
-
-        moyennesClasses.sort((a,b)=> b.moyenne - a.moyenne)
-        const bestMoy = moyennesClasses[0]
-        const badMoy = moyennesClasses[moyennesClasses.length-1]
-        return {
-            bestMoy:bestMoy ,
-            badMoy:badMoy
-        }
-    }catch(err){
-        console.log("erreur au niveau de la fonction de recuperation de la moyenne",err)
-    }
-}
 // moyenne de la classe 
 const moyClasse = async (id) => {
     try {
@@ -340,7 +307,7 @@ const moyClasse = async (id) => {
         const eleves = await prisma.inscription.findMany({
             where :{
                 classe:{
-                    id:id
+                    id:Number(id)
                 },
                 id_annee_academique:annee.id
             }
@@ -434,6 +401,18 @@ const getBulletinInformation = async (matricule)=>{
         const moyenneGenerale = moyenne(matieres)
         const rang = await getRang(matricule, eleve.classe.id)
         const rangMatiere = await getRangParMatiere(matricule, eleve.classe.id)
+
+        const signature = await prisma.signature.findFirst({
+            where:{
+                user:{
+                    admin :{
+                        etablissement : {
+                            id:etablissement.id
+                        }
+                    }
+                }
+            }
+        })
         // const matieres = await calculerMoyenne(matricule)
 
         if (!matieres.length) {
@@ -444,7 +423,8 @@ const getBulletinInformation = async (matricule)=>{
                 rang: null,
                 etablissement,
                 enseignants,
-                rangMatiere: []
+                rangMatiere: [],
+                signature:signature.url
             }
         }
         return{
@@ -454,7 +434,8 @@ const getBulletinInformation = async (matricule)=>{
             rang:rang,
             etablissement:etablissement,
             enseignants:enseignants,
-            rangMatiere: rangMatiere
+            rangMatiere: rangMatiere,
+            signature:signature.url
         }
     }catch(err){
         console.log(err)
@@ -524,7 +505,6 @@ const moyenneElevesEtablissement = async (admin_id, type) => {
 
 
 // recuperer le nombre d'eleve faibles par classe 
-
 const NombreEleveFaiblesClasse = async (admin_id)=>{
     try {
         const etablissement = await prisma.etablissement.findUnique({
@@ -591,8 +571,8 @@ const NombreEleveFaiblesClasse = async (admin_id)=>{
         return []
     }
 }
-// recuperer le nombre d'eleve forts par classe 
 
+// recuperer le nombre d'eleve forts par classe 
 const NombreEleveFortsClasse = async (admin_id)=>{
     try {
         const etablissement = await prisma.etablissement.findUnique({
@@ -717,7 +697,7 @@ const meilleureByClasse = async (idClasse)=>{
         const eleves = await prisma.inscription.findMany({
             where :{
                 classe:{
-                    id:idClasse
+                    id:Number(idClasse)
                 }
             },
             include : {
@@ -741,12 +721,13 @@ const meilleureByClasse = async (idClasse)=>{
         return err
     }
 }
+
 const mauvaisByClasse = async (idClasse)=>{
     try {
         const eleves = await prisma.inscription.findMany({
             where :{
                 classe:{
-                    id:idClasse
+                    id:Number(idClasse)
                 }
             },
             include : {
@@ -771,6 +752,50 @@ const mauvaisByClasse = async (idClasse)=>{
     }
 }
 
+
+const top1classeAndBad1 = async (idClasse) => {
+    try{
+        const eleves = await listeElevesRequest(idClasse)
+        if(!eleves){
+            return null
+        }
+        const elevesWithMoy = await Promise.all(
+            eleves.map( async (eleve)=>{
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule)
+                const moyenneEleve = moyenne(moyenneMatieres)
+                return {
+                        nom:eleve.nom,
+                        prenom:eleve.prenom,
+                        moyenne:moyenneEleve 
+                }
+            })
+        )
+        console.log(elevesWithMoy)
+        let maxMoy = elevesWithMoy[0]
+        let minMoy = elevesWithMoy[0]
+        elevesWithMoy.map((eleve)=>{
+            if(eleve.moyenne > maxMoy.moyenne){
+                maxMoy = eleve
+            }
+            if(eleve.moyenne < minMoy){
+                minMoy = eleve
+            }
+        })
+        console.log("meilleur",maxMoy)
+        if (
+            maxMoy.nom === minMoy.nom &&
+            maxMoy.prenom === minMoy.prenom
+        ) {
+            return {
+                meilleure: maxMoy.moyenne >= 10 ? maxMoy : null,
+                mauvaise: maxMoy.moyenne < 10 ? maxMoy : null
+            };
+        }
+    }catch(err){
+        return err
+    }
+}
+
 module.exports = {
     calculerMoyenne, 
     listeElevesRequest,
@@ -779,12 +804,12 @@ module.exports = {
     getRang,
     getMention,
     getNotesClasseByMatiere,
-    bestAndBadMoyClasse,
     moyClasse,
     moyenneElevesEtablissement,
     moyenneEtablissement,
     meilleureByClasse, 
     NombreEleveFaiblesClasse,
     NombreEleveFortsClasse,
-    mauvaisByClasse
+    mauvaisByClasse,
+    top1classeAndBad1
 }

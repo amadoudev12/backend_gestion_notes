@@ -4,7 +4,7 @@ const verifyToken = require('../middleware/verifyToken')
 const route = express.Router()
 
 route.post('/create', postEtablissement)
-route.get('/moyenne-generale-evolution', moyenneGeneralesEtablissemetEvolution)
+route.get('/moyenne-generale-evolution',verifyToken, moyenneGeneralesEtablissemetEvolution)
 route.get('/moyenne-classes', verifyToken, moyennesClasseEtablissement)
 route.get('/moyenne-matieres', verifyToken, moyenneMatieres)
 route.get('/:id', getEtablissementByIdAdmin)

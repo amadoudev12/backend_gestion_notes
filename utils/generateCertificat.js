@@ -36,6 +36,7 @@ const generateCertificat = async (eleve, anneeAcademique, certificat, classe, et
     fs.mkdirSync(tempDir, { recursive: true })
     let page 
     const baseurl = process.env.BASE_URL
+    console.log(baseurl+signature)
     try {
         const fichier = path.join(__dirname,'../view/Certificat.ejs')
         const html = await  ejs.renderFile(fichier,{
@@ -52,7 +53,18 @@ const generateCertificat = async (eleve, anneeAcademique, certificat, classe, et
         page = await browser.newPage()
         await page.setDefaultNavigationTimeout(60000)
         await page.setDefaultTimeout(60000)
-        await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 45000 })
+        await page.setContent(html, { waitUntil: "networkidle0", timeout: 45000 })
+        const images = await page.evaluate(() => {
+            return Array.from(document.images).map(img => ({
+                src: img.src,
+                complete: img.complete,
+                width: img.naturalWidth,
+                height: img.naturalHeight
+            }))
+        })
+
+        console.log(images)
+        await page.waitForSelector('img')
         await new Promise(resolve => setTimeout(resolve, 2000))
         const certificatFile = path.join(tempDir, 'certificat.pdf')
         

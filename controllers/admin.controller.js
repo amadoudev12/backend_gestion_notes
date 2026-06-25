@@ -152,6 +152,7 @@ const StatEtablissement = async (req, res) => {
         return res.status(403).json({message:"vous êtes pas un administrateur"})
     }
     const admin_id = req.user.profil.id
+    console.log(admin_id)
         if(!admin_id){
         return res.status(400).json({message:'fournissez les donnés'})
     }
@@ -168,7 +169,12 @@ const StatEtablissement = async (req, res) => {
         }
         const nombreEleves = await prisma.inscription.count({
             where:{
-                id_annee_academique:annee.id
+                id_annee_academique:annee.id,
+                classe : {
+                    etablissement : {
+                        id:etablissement.id
+                    }
+                }
             }
         })
         const nombreClasses = await prisma.classe.count({
@@ -177,18 +183,11 @@ const StatEtablissement = async (req, res) => {
             }
         })
         
-        const enseignements = await prisma.affectation.findMany({
-            where: {
-                classe: {
-                    idEtablissement: etablissement.id
-                }
-            },
-            select: {
-                id_prof: true
+        const nombreEnseignants = await prisma.enseignantEtablissement.count({
+            where : {
+                etablissement_id:etablissement.id
             }
         })
-        const enseignantsUniques = [...new Set(enseignements.map(e => e.id_prof))];
-        const nombreEnseignants = enseignantsUniques.length;
         const moyEtablisement = await moyenneEtablissement(admin_id)
         return res.status(200).json({nombreEleves:nombreEleves ?? "0", nombreClasses:nombreClasses?? "0", nombreEnseignants:nombreEnseignants??"0", moyenneEtablissement:moyEtablisement??"0"})
     }catch(err){

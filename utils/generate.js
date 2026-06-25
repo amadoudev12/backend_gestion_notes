@@ -318,7 +318,7 @@ const generate = async (matricule) => {
         const trimestre = await prisma.trimestre.findFirst({
             where : { actif: true }
         })
-        const { eleveInfo, matiere, moyenneGenerale, rang, enseignants, etablissement, rangMatiere } = await getBulletinInformation(matricule)
+        const { eleveInfo, matiere, moyenneGenerale, rang, enseignants, etablissement, rangMatiere, signature } = await getBulletinInformation(matricule)
         const enseignantWithSignatures = await Promise.all(
             enseignants.map(async (ens) => {
                 const pathName = await prisma.signature.findUnique({
@@ -345,7 +345,8 @@ const generate = async (matricule) => {
             totalMoyenneCoeficient: totalMoyenneCoeficient(matiere),
             distinction,
             rangMatiere,
-            baseurl:baseUrl
+            baseurl:baseUrl,
+            signatureDirecteur:signature
         })
         const browser = await getBrowserFromPool()
         page = await browser.newPage()
@@ -397,7 +398,7 @@ const generate = async (matricule) => {
                 eleveId_idtrimestre_id_annee:{
                     eleveId:eleveInfo.eleve.matricule,
                     idtrimestre:trimestre.id_trimestre,
-                    id_annee:1
+                    id_annee:1,
                 }
             },
             update : {
@@ -407,6 +408,7 @@ const generate = async (matricule) => {
                 eleveId: matricule,
                 idtrimestre: trimestre.id_trimestre,
                 id_annee: 1,
+                id_etablissement:etablissement.id,
                 moyenneGenerale,
                 decision,
                 rang,

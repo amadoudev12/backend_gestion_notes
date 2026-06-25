@@ -1,5 +1,6 @@
+const logger = require('../lib/logger');
 const { prisma } = require('../lib/prisma')
-const {listeElevesRequest,  bestAndBadMoyClasse, moyClasse} = require('../utils/util')
+const {listeElevesRequest,  bestAndBadMoyClasse, moyClasse, meilleureByClasse, mauvaisByClasse, moyenne, moyenneElevesEtablissement,  top1classeAndBad1} = require('../utils/util')
 
 const createClasse = async (req, res) => {
     try {
@@ -56,6 +57,24 @@ const createClasse = async (req, res) => {
         });
     }
 };
+
+const InfoClasseController = async (req, res)=>{
+    const id = req.params.id
+    try {
+        const classe = await prisma.classe.findUnique({
+            where : {
+                id:Number(id)
+            }
+        })
+        if(!classe){
+            return res.status(404).json({message:'classe non trouve'})
+        }
+        return res.status(200).json({classe})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({message:"erreur",err})
+    }
+}
 
 const listeEleveParClasse = async (req,res) => {
     const classe_id = req.params.id
@@ -123,13 +142,77 @@ const getClasseMatiere = async (req, res)=>{
     }
 }
 
-const bestAndBadMoyenneController = async (req, res)=>{
+// recuperer la meilleure et mauvaise moyenne d'une classe 
+const moyenneClasseController = async (req, res)=>{
     try {
         const id = req.params.id
         const moy = await moyClasse(id)
         return res.status(200).json({moy})
     }catch(err){
         console.log(err)
+        return res.status(500).json({err})
+    }
+}
+
+// recuperer la meilleur et mauvaise  moyenne 
+
+// const meilleurMauvaiseMoyenne = async (req, res)=> {
+//     const id = req.params.id
+//     try {
+//         const result = await bestAndBadMoyClasse(id)
+//         return res.status(200).json({result})
+//     }catch(err){
+//         console.log(err)
+//         return res.status(500).json({err})
+//     }
+// }
+
+const classeStatController = async (req, res)=>{
+    const id = req.params.id
+    try {
+        const totalEleves = await prisma.inscription.count({
+            where : {
+                id_classe:Number(id)
+            }
+        })
+        const moyenneClasse = await moyClasse(id)
+        const result = await top1classeAndBad1(id) //retourne  meillleur et la mauvaise moyenne de la classe
+        return res.status(200).json({moyenne:moyenneClasse, meilleurEtMauvais:result, total:totalEleves})
+    }catch(err){
+        console.log(err)
+        return res.status(500).json({err})
+    }
+}
+
+const moyenneMatiereClasseController = async(req, res)=>{
+    const id = req.params.id
+    try {
+        const matieres = await prisma.affectation.findMany({
+            where : {
+                id_classe:Number(id)
+            },
+            include : {
+                matiere : {
+                    select : {
+                        nom:true,
+                        notes:true
+                    }
+                }
+            }
+        })
+        console.log(matieres)
+        const result = matieres.map(matiereSelect=>{
+            const matiere = matiereSelect.matiere
+            const moyenneMatieres = moyenne(matiere.notes)
+            return {
+                nom: matiere.nom,
+                moyenneMat:moyenneMatieres
+            }
+        })
+        return res.status(200).json({moyneeMatieresClasse:result})
+    }catch(err){
+        console.log(err)
+        logger.error(err)
         return res.status(500).json({err})
     }
 }
@@ -225,14 +308,53 @@ const deleteClasse = async (req, res) => {
     }
 };
 
-
+const repartitionNoterClasseController = async(req, res)=> {
+    const partition = {
+        "0-5": 0,
+        "5-10": 0,
+        "10-15": 0,
+        "15-20": 0
+    }
+    const id = req.params.id
+    try {
+        const notes = await prisma.note.findMany({
+            where : {
+                inscription : {
+                    id_classe:Number(id)
+                }
+            }
+        })
+        if(!notes){
+            return res.status(404).json({message:'aucune notes'})
+        }
+        notes.map(note=>{
+            if (note.valeur < 5) partition["0-5"]++
+            else if (note.valeur < 10) partition["5-10"]++
+            else if (note.valeur < 15) partition["10-15"]++
+            else partition["15-20"]++
+        })
+        const repartitionNote = [
+            {range:"0-5", count:partition['0-5']},
+            {range:"5-10", count:partition['5-10']},
+            {range:"10-15", count:partition['10-15']},
+            {range:"15-20", count:partition['15-20']},
+        ]
+        return res.status(200).json({repartitionNote})
+    }catch (error) {
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+}
 module.exports = {
     listeEleveParClasse,
     listeClasses,
     listeClasseByEtabblissement,
     getClasseMatiere,
-    bestAndBadMoyenneController,
+    moyenneClasseController,
     createClasse,
     updateClasse,
-    deleteClasse
+    deleteClasse,
+    classeStatController,
+    moyenneMatiereClasseController,
+    repartitionNoterClasseController,
+    InfoClasseController
 }

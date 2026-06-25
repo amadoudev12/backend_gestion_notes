@@ -202,6 +202,10 @@
   function isDistinction(val) {
     return distinction === val;
   }
+
+        const currentDate = new Date();
+        const dateDay = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+
 %>
 
   <!-- EN-TÊTE REPUBLIQUE -->
@@ -212,7 +216,7 @@
       ET L'ENSEIGNEMENT TECHNIQUE
     </div>
     <div class="titre-bulletin">
-      <div class="label">BULLETIN TRIMESTRIEL DE NOTES</div>
+      <div class="label">BULLETIN  DE NOTES</div>
       <h1><%= trimestre.libelle %></h1>
     </div>
     <div class="annee-box">
@@ -404,28 +408,34 @@
       <div style="font-weight:bold; text-align:center; font-size:8pt; text-decoration:underline; margin-bottom:4px;">
         Nom / Signature et Cachet du Chef d'Etablissement
       </div>
-      <div style="min-height:55px;"></div>
+      <div style="min-height:40px;display: flex; align-items: center; justify-content: center;">
+        <img  src="<%= baseurl + signatureDirecteur %>" width="100">
+      </div>
       <div style="font-size:7.8pt; text-align:center;">
         <%= etablissement.directeur %>
       </div>
     </div>
 
   </div>
-
+      <div style="font-size:8pt; display: flex; align-items: center; justify-content: center; ">
+        Fait à <%= etablissement.adresse.split(',')[0] %>, le <%= dateDay %>
+      </div>
   <!-- DÉCISION DU CONSEIL -->
-  <div class="decision-bloc">
+  <!-- <div class="decision-bloc">
     <div class="dec-left">
       <div class="dec-title">Décision du conseil de classe</div>
       <div class="dec-val"><%= decision %></div>
     </div>
     <div class="dec-right">
       <div class="sig-title">Nom / Signature du Professeur principal</div>
-      <div style="min-height:40px;"></div>
-      <div style="font-size:8pt;">
-        Fait à <%= etablissement.adresse.split(',')[0] %>, le _______________
+      <div style="min-height:40px;display: flex; align-items: center; justify-content: center;">
+        <img  src="<%= baseurl + signatureDirecteur %>" width="100">
+      </div>
+      <div style="font-size:8pt; display: flex; align-items: center; justify-content: center; ">
+        Fait à <%= etablissement.adresse.split(',')[0] %>, le <%= dateDay %>
       </div>
     </div>
-  </div>
+  </div> -->
 
   <!-- PIED DE PAGE -->
   <div class="footer">

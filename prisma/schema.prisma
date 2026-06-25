@@ -39,10 +39,10 @@ model User {
   firstLogin Boolean @default(true)
   signatureComplete Boolean @default(false)
   
-  signature Signature ?
+  signature Signature?
   eleve       Eleve?
   enseignant  Enseignant?
-  admin Administrateur ?
+  admin Administrateur?
 }
 
 model Signature {
@@ -58,7 +58,7 @@ model Eleve {
   matricule   String   @id @unique
   nom         String
   prenom      String
-  email       String
+  email       String    @unique
   dateNaissance DateTime?
   lieuNaissance String ?
   sexe SEXE ? 
@@ -174,29 +174,14 @@ model Affectation {
 
   @@unique([id_classe, id_matiere])
 }
-model Bulletin {
-  id               Int      @id @default(autoincrement())
-  eleveId          String
-  idtrimestre      Int
-  id_annee         Int
-  moyenneGenerale  Float
-  decision         String
-  rang             Int
-  mention          String?
-  fichier_url      String?   //AJOUT IMPORTANT
-  eleve       Eleve @relation(fields: [eleveId], references: [matricule])
-  trimestre   Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
-  annee       AnneeAcademique @relation(fields: [id_annee], references: [id])
 
-  @@unique([eleveId, idtrimestre, id_annee])
-}
 
 model Absence {
   id               Int      @id @default(autoincrement())
-  nombre            Int
-  justifiee        Justifie @default(oui)
+  nombre_heure            Int
   // Relation avec élève
   matricule_eleve  String
+  
   eleve            Eleve    @relation(fields: [matricule_eleve], references: [matricule])
   // Relation avec trimestre
   trimestreId      Int
@@ -220,8 +205,26 @@ model Etablissement {
   Administrateur  Administrateur @relation(fields: [admin_id], references: [id])
   enseignants   EnseignantEtablissement[]
   Matieres Matiere[]
+  bulletin Bulletin[]
 }
 
+model Bulletin {
+  id               Int      @id @default(autoincrement())
+  eleveId          String
+  idtrimestre      Int
+  id_annee         Int
+  id_etablissement  Int 
+  moyenneGenerale  Float
+  decision         String
+  rang             Int
+  mention          String?
+  fichier_url      String?   //AJOUT IMPORTANT
+  eleve       Eleve @relation(fields: [eleveId], references: [matricule])
+  trimestre   Trimestre @relation(fields: [idtrimestre], references: [id_trimestre])
+  annee       AnneeAcademique @relation(fields: [id_annee], references: [id])
+  etablissement Etablissement @relation(fields: [id_etablissement], references: [id])
+  @@unique([eleveId, idtrimestre, id_annee])
+}
 
 model AnneeAcademique {
   id            Int      @id @default(autoincrement())

@@ -1,6 +1,7 @@
 const {prisma} = require('../lib/prisma')
 const xlsx = require('xlsx')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const sendEmail = require('../services/sendEmail');
 const createEnseignantController = async (req, res) => {
 
     if(req.user.user.role !="ADMIN"){
@@ -74,12 +75,14 @@ const createEnseignantController = async (req, res) => {
                         etablissement_id:idEtablissement
                     }
                 })
+                await sendEmail(enseignantCree.nom, enseignantCree.email, enseignantCree.matricule, enseignantCree.matricule)
             }
         }
 
         return res.status(201).json({
             message: "Les enseignants ont été enregistrés avec succès"
         });
+
 
     } catch (err) {
         console.log(err);
@@ -189,9 +192,13 @@ const enseignantStatController = async (req,res)=>{
             return res.status(403).json({message:"vous êtes pas un proffesseur"})
         }
         const matricule = req.user.profil.matricule
-        const nombreClasse = await prisma.affectation.count({
-            where : {id_prof:matricule}
+        const affectation = await prisma.affectation.findMany({
+            where : {id_prof:matricule},
+            select:{
+                id_classe:true
+            }
         })
+        const nombreClasse = new Set(affectation.map(a=> a.id_classe)).size
         const classes= await prisma.affectation.findMany({
             where:{id_prof:matricule},
             select:{

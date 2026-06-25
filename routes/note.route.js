@@ -1,10 +1,14 @@
 const express = require('express')
 const { postNote, getNotesByElveId, getAllNotesByClasseByMatier, noteRepartition, getAllNotesByMatiere } = require('../controllers/note.controller')
 const verifyToken = require('../middleware/verifyToken')
+const { createNoteValidation, getNotesValidation } = require('../middleware/validators')
+
 const route = express.Router()
-route.post('/create-note', postNote)
-route.post('/liste-note', getAllNotesByClasseByMatier)
+
+route.post('/create-note', createNoteValidation, postNote)
+route.post('/liste-note', getNotesValidation, getAllNotesByClasseByMatier)
 route.get('/repartition-note', verifyToken, noteRepartition)
-route.post('/eleves/notes',getAllNotesByMatiere)
+route.post('/eleves/notes', getNotesValidation, getAllNotesByMatiere)
 route.get('/getNote/:id', getNotesByElveId)
+
 module.exports = route

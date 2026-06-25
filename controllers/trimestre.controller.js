@@ -1,6 +1,9 @@
 const { prisma } = require("../lib/prisma")
 
 const postTrimestreController = async (req, res) => {
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
     const body = req.body
     if(!body){
         return res.status(400).json({message:'fournissez les donnés'})
@@ -38,6 +41,28 @@ const getTrimestres = async (req, res) => {
     }
 }
 
+const deleteTrimestre = async (req, res) => {
+    if(req.user.user.role !="ADMIN"){
+        return res.status(403).json({message:"vous êtes pas un administrateur"})
+    }
+    const id = req.params.id
+    try {
+        await prisma.trimestre.delete({
+            where:{
+                id_trimestre:Number(id)
+            }
+        })
+        return res.json({
+            message: "Trimestre supprimé avec succès"
+        })
+    }catch(err){
+        console.error(err)
+        res.status(500).json({
+            message: "Erreur lors de la suppression  du trimestre"
+        })
+    }
+}
+
 const actifTrimestreController = async (req, res) => {
     const id = req.params.id
     try {
@@ -66,5 +91,6 @@ const actifTrimestreController = async (req, res) => {
 module.exports = {
     postTrimestreController,
     getTrimestres,
-    actifTrimestreController
+    actifTrimestreController,
+    deleteTrimestre
 }

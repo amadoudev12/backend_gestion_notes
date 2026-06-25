@@ -43,9 +43,15 @@ const getEtablissementByIdAdmin = async (req, res) => {
 
 
 const moyenneGeneralesEtablissemetEvolution = async (req,res)=> {
+    const admin_id = req.user.profil.id
     try {
+        const etablissement = await prisma.etablissement.findUnique({
+            where : {
+                admin_id:admin_id
+            }
+        })
         const moyennes = await prisma.bulletin.groupBy({
-            by: ['idtrimestre'],
+            by: ['idtrimestre','id_etablissement'],
             _avg: {
                 moyenneGenerale: true,
             },
@@ -90,7 +96,7 @@ const moyennesClasseEtablissement = async (req, res)=>{
                 }
             })
         )
-
+        console.log(moyenneClasses)
         return res.status(200).json({moyenneClasses})
     }catch(err){
         console.log(err)
