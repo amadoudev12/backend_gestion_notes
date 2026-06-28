@@ -189,6 +189,7 @@ const StatEtablissement = async (req, res) => {
             }
         })
         const moyEtablisement = await moyenneEtablissement(admin_id)
+        console.log('nombre',nombreEnseignants, nombreEleves, nombreClasses, moyEtablisement)
         return res.status(200).json({nombreEleves:nombreEleves ?? "0", nombreClasses:nombreClasses?? "0", nombreEnseignants:nombreEnseignants??"0", moyenneEtablissement:moyEtablisement??"0"})
     }catch(err){
         console.log(err)
@@ -315,10 +316,11 @@ const meilleureByClasseController = async(req, res)=>{
                 const meilleuresClasse = await meilleureByClasse(classe.id)
                 return {
                     classe:classe.libelle,
-                    eleves: meilleuresClasse
+                    eleves: meilleuresClasse.sort((a,b)=> b.moyenne - a.moyenne)
                 }
             })
         )
+        console.log(resultat)
         return res.status(200).json({message:"les meilleurs eleves par classe",resultat})
     }catch(err){
         console.log(err)

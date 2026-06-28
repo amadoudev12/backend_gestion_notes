@@ -37,6 +37,59 @@ const listeElevesRequest = async (idClasse) => {
 };
 
 
+// const moyenne = async (tab, matricule = null) => {
+//     if (!tab || tab.length === 0) return 0;
+
+//     let coefAvantInscription = 0;
+
+//     if (matricule) {
+//         const annee = await prisma.anneeAcademique.findFirst({
+//             where: { actif: true }
+//         });
+
+//         const inscription = await prisma.inscription.findUnique({
+//             where: {
+//                 matricule_eleve_id_annee_academique: {
+//                     matricule_eleve: matricule,
+//                     id_annee_academique: annee.id
+//                 }
+//             }
+//         });
+
+//         if (inscription) {
+//             const result = await prisma.note.aggregate({
+//                 where: {
+//                     id_inscription: inscription.id
+//                 },
+//                 _sum: {
+//                     coefficient: true
+//                 }
+//             });
+
+//             coefAvantInscription = result._sum.coefficient || 0;
+//         }
+//     }
+
+//     let total = 0;
+//     let totalCoef = 0;
+
+//     tab.forEach(t => {
+//         const val = t.valeur != null ? t.valeur : t.moyenne;
+
+//         if (t.valeur != null) {
+//             total += val * t.coefficient;
+//             totalCoef += t.coefficient;
+//         } else {
+//             // t.moyenne => coefficient ne change pas
+//             total += val;
+//             totalCoef += t.coefficient;
+//         }
+//     });
+//     console.log('coefficient',coefAvantInscription)
+//     totalCoef += coefAvantInscription;
+
+//     return parseFloat((total / totalCoef).toFixed(2));
+// };
 const moyenne = (tab) => {
     if (!tab || tab.length === 0) return 0;
     let total = 0;
@@ -64,36 +117,36 @@ const moyenneE = (tab)=>{
 }
 
 //recupere toutes les notes d'un eleve
-const getNoteFunction = async (id) => {
+const getNoteFunction = async (id, id_trimestre=null) => {
     if (!id) {
         throw new Error('aucun id selectionné')
     }
     try {
-        const trimestre = await prisma.trimestre.findFirst({
-            where: { actif: true }
-        })
-        const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
-        const eleve = await prisma.eleve.findUnique({
-            where: { matricule: id },
-            include: {
-                inscriptions: {
-                    where: {
-                        id_annee_academique: annee.id
-                    },
-                    include: {
-                        notes: {
-                            where: {
-                                id_trimestre: trimestre.id_trimestre
-                            },
-                            select: {
-                                valeur: true,
-                                coefficient: true,
-                                matiere: {
-                                    select: {
-                                        nom: true,
-                                        affectation:{
-                                            select:{
-                                                coefficient:true
+        let matieres = {}
+        if(id_trimestre){
+            const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+            const eleve = await prisma.eleve.findUnique({
+                where: { matricule: id },
+                include: {
+                    inscriptions: {
+                        where: {
+                            id_annee_academique: annee.id
+                        },
+                        include: {
+                            notes: {
+                                where: {
+                                    id_trimestre: id_trimestre
+                                },
+                                select: {
+                                    valeur: true,
+                                    coefficient: true,
+                                    matiere: {
+                                        select: {
+                                            nom: true,
+                                            affectation:{
+                                                select:{
+                                                    coefficient:true
+                                                }
                                             }
                                         }
                                     }
@@ -102,36 +155,101 @@ const getNoteFunction = async (id) => {
                         }
                     }
                 }
-            }
-        })
-        // élève introuvable
-        if (!eleve) {
-            throw new Error("élève introuvable")
-        }
-        if (!eleve.inscriptions.length) {
-            return []
-        }
-        const inscription = eleve.inscriptions[0]
-        // aucune note
-        if (!eleve.inscriptions.length || !eleve.inscriptions[0].notes.length) {
-            return []
-        }
-        const matieres = {}
-        inscription.notes.forEach(note => {
-            const nomMatiere = note.matiere.nom
-            const coefMatiere = note.matiere.affectation[0]?.coefficient
-            if (!matieres[nomMatiere]) {
-                matieres[nomMatiere] = {
-                    matiere: nomMatiere,
-                    coefficient_matiere: coefMatiere,
-                    notes: [],
-                }
-            }
-            matieres[nomMatiere].notes.push({
-                valeur: note.valeur,
-                coefficient: note.coefficient
             })
-        })
+            // élève introuvable
+            if (!eleve) {
+                throw new Error("élève introuvable")
+            }
+            if (!eleve.inscriptions.length) {
+                return []
+            }
+            const inscription = eleve.inscriptions[0]
+            // aucune note
+            if (!eleve.inscriptions.length || !eleve.inscriptions[0].notes.length) {
+                return []
+            }
+            inscription.notes.forEach(note => {
+                const nomMatiere = note.matiere.nom
+                const coefMatiere = note.matiere.affectation[0]?.coefficient
+                if (!matieres[nomMatiere]) {
+                    matieres[nomMatiere] = {
+                        matiere: nomMatiere,
+                        coefficient_matiere: coefMatiere,
+                        notes: [],
+                    }
+                }
+                matieres[nomMatiere].notes.push({
+                    valeur: note.valeur,
+                    coefficient: note.coefficient
+                })
+            })
+        }else {
+            const trimestre = await prisma.trimestre.findFirst({
+                where: { actif: true }
+            })
+            if(!trimestre) {
+                return []
+            }
+            const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
+            const eleve = await prisma.eleve.findUnique({
+                where: { matricule: id },
+                include: {
+                    inscriptions: {
+                        where: {
+                            id_annee_academique: annee.id
+                        },
+                        include: {
+                            notes: {
+                                where: {
+                                    id_trimestre: trimestre.id_trimestre
+                                },
+                                select: {
+                                    valeur: true,
+                                    coefficient: true,
+                                    matiere: {
+                                        select: {
+                                            nom: true,
+                                            affectation:{
+                                                select:{
+                                                    coefficient:true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            // élève introuvable
+            if (!eleve) {
+                throw new Error("élève introuvable")
+            }
+            if (!eleve.inscriptions.length) {
+                return []
+            }
+            const inscription = eleve.inscriptions[0]
+            // aucune note
+            if (!eleve.inscriptions.length || !eleve.inscriptions[0].notes.length) {
+                return []
+            }
+            inscription.notes.forEach(note => {
+                const nomMatiere = note.matiere.nom
+                const coefMatiere = note.matiere.affectation[0]?.coefficient
+                if (!matieres[nomMatiere]) {
+                    matieres[nomMatiere] = {
+                        matiere: nomMatiere,
+                        coefficient_matiere: coefMatiere,
+                        notes: [],
+                    }
+                }
+                matieres[nomMatiere].notes.push({
+                    valeur: note.valeur,
+                    coefficient: note.coefficient
+                })
+            })
+        }
         return Object.values(matieres)
     } catch (err) {
         console.log('erreur au niveau du utils:', err)
@@ -210,13 +328,14 @@ const getNotesClasseByMatiere = async (
 };
 
 //recupere les moyennes des matieres d'un eleve
-const calculerMoyenne = async (id) => {
-    const matieres = await getNoteFunction(id)
+const calculerMoyenne = async (id, id_trimestre=null) => {
+    // console.log('id trimestre fonction calculer moyenne', id_trimestre)
+    const matieres = await getNoteFunction(id,id_trimestre)
     return matieres.map(m => ({
         matiere: m.matiere,
         coefficient: m.coefficient_matiere,
-        moyenne: Number(moyenne(m.notes)),
-        appreciation: getMention(moyenne(m.notes))
+        moyenne: Number(moyenne(m.notes, id)),
+        appreciation: getMention(moyenne(m.notes,id))
     }))
 }
 
@@ -301,8 +420,9 @@ const getRangParMatiere = async (matricule, idClasse) => {
 }
 
 // moyenne de la classe 
-const moyClasse = async (id) => {
+const moyClasse = async (id, id_trimestre=null) => {
     try {
+        // console.log('id trimestre fonction moyClaas', id_trimestre)
         const annee = await prisma.anneeAcademique.findFirst({where:{actif:true}})
         const eleves = await prisma.inscription.findMany({
             where :{
@@ -315,7 +435,7 @@ const moyClasse = async (id) => {
         
         let sum = 0
         for(let eleve of eleves){
-            const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
+            const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve, id_trimestre)
             const moyenneEleve = moyenne(moyenneMatieres)
             if(moyenneEleve){
                 sum += moyenneEleve 
@@ -674,12 +794,12 @@ const moyenneEtablissement = async(admin_id)=>{
             eleves.map(async (eleve) =>{
                 const moyenneMatieres = await calculerMoyenne(eleve.matricule_eleve)
                 const moyenneGenerale = moyenne(moyenneMatieres)
+                console.log("moyenneGenerale", moyenneGenerale)
                 return {
                     moyenneGenerale: moyenneGenerale
                 }
             })
         )
-
         const moyenneEtablissement = moyenneE(moyennesEleves)
         return {
             moyenneEtablissement,
@@ -753,7 +873,7 @@ const mauvaisByClasse = async (idClasse)=>{
 }
 
 
-const top1classeAndBad1 = async (idClasse) => {
+const top1classeAndBad1 = async (idClasse, id_trimestre) => {
     try{
         const eleves = await listeElevesRequest(idClasse)
         if(!eleves){
@@ -761,8 +881,11 @@ const top1classeAndBad1 = async (idClasse) => {
         }
         const elevesWithMoy = await Promise.all(
             eleves.map( async (eleve)=>{
-                const moyenneMatieres = await calculerMoyenne(eleve.matricule)
+                const moyenneMatieres = await calculerMoyenne(eleve.matricule, id_trimestre)
                 const moyenneEleve = moyenne(moyenneMatieres)
+                if(!moyenneMatieres.length){
+                    return null
+                }
                 return {
                         nom:eleve.nom,
                         prenom:eleve.prenom,
@@ -770,9 +893,10 @@ const top1classeAndBad1 = async (idClasse) => {
                 }
             })
         )
-        console.log(elevesWithMoy)
         let maxMoy = elevesWithMoy[0]
+        let nombreElevesFort = 0
         let minMoy = elevesWithMoy[0]
+        let nombreElevesFaible = 0
         elevesWithMoy.map((eleve)=>{
             if(eleve.moyenne > maxMoy.moyenne){
                 maxMoy = eleve
@@ -780,17 +904,26 @@ const top1classeAndBad1 = async (idClasse) => {
             if(eleve.moyenne < minMoy){
                 minMoy = eleve
             }
+
+            eleve.moyenne >= 10 ? nombreElevesFort++ : nombreElevesFaible++
         })
-        console.log("meilleur",maxMoy)
         if (
             maxMoy.nom === minMoy.nom &&
             maxMoy.prenom === minMoy.prenom
         ) {
             return {
                 meilleure: maxMoy.moyenne >= 10 ? maxMoy : null,
-                mauvaise: maxMoy.moyenne < 10 ? maxMoy : null
+                mauvaise: maxMoy.moyenne < 10 ? maxMoy : null,
+                fort: nombreElevesFort,
+                faible: nombreElevesFaible
             };
         }
+        return {
+                meilleure: maxMoy.moyenne >= 10 ? maxMoy : null,
+                mauvaise: maxMoy.moyenne < 10 ? maxMoy : null,
+                fort: nombreElevesFort,
+                faible: nombreElevesFaible
+        };
     }catch(err){
         return err
     }

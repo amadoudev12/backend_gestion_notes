@@ -314,7 +314,9 @@ const noteRepartition = async (req, res) => {
             },
             select: { valeur: true }
         })
-
+        if (notes.length === 0) {
+            return res.status(200).json({ message: "Aucune note",  repartition:[] });
+        }
         // Distribuer les notes
         notes.forEach((note) => {
             if (note.valeur < 5) partition["0-5"]++

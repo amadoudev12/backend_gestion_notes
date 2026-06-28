@@ -168,6 +168,7 @@ const moyenneClasseController = async (req, res)=>{
 // }
 
 const classeStatController = async (req, res)=>{
+    const {id_trimestre} = req.query
     const id = req.params.id
     try {
         const totalEleves = await prisma.inscription.count({
@@ -175,8 +176,9 @@ const classeStatController = async (req, res)=>{
                 id_classe:Number(id)
             }
         })
-        const moyenneClasse = await moyClasse(id)
-        const result = await top1classeAndBad1(id) //retourne  meillleur et la mauvaise moyenne de la classe
+        const moyenneClasse = await moyClasse(id,Number(id_trimestre))
+        const result = await top1classeAndBad1(id, Number(id_trimestre)) //retourne  meillleur et la mauvaise moyenne de la classe
+        console.log(result)
         return res.status(200).json({moyenne:moyenneClasse, meilleurEtMauvais:result, total:totalEleves})
     }catch(err){
         console.log(err)
@@ -186,27 +188,39 @@ const classeStatController = async (req, res)=>{
 
 const moyenneMatiereClasseController = async(req, res)=>{
     const id = req.params.id
+    console.log("req.query-moyenne", req.query)
+   const {id_trimestre} = req.query
     try {
-        const matieres = await prisma.affectation.findMany({
+        const matieresAffecterAvecNotes = await prisma.affectation.findMany({
             where : {
-                id_classe:Number(id)
+                id_classe: Number(id)
             },
             include : {
                 matiere : {
                     select : {
                         nom:true,
-                        notes:true
+                        notes:{
+                            where:{
+                                inscription:{
+                                    id_classe:Number(id)
+                                },
+                                id_trimestre:Number(id_trimestre)
+                            },
+                        }
                     }
                 }
             }
         })
-        console.log(matieres)
+        const matieres = matieresAffecterAvecNotes.filter((resultat, index, tableau)=> 
+            index === tableau.findIndex((t)=> t.id_matiere === resultat.id_matiere)
+        )
         const result = matieres.map(matiereSelect=>{
             const matiere = matiereSelect.matiere
             const moyenneMatieres = moyenne(matiere.notes)
+            // console.log(matiere.notes)
             return {
                 nom: matiere.nom,
-                moyenneMat:moyenneMatieres
+                moyenneMat:moyenneMatieres ? moyenneMatieres : 0
             }
         })
         return res.status(200).json({moyneeMatieresClasse:result})
@@ -309,6 +323,9 @@ const deleteClasse = async (req, res) => {
 };
 
 const repartitionNoterClasseController = async(req, res)=> {
+    console.log(req.body)
+    const {id_trimestre} = req.query
+    console.log("id trimestre:",id_trimestre)
     const partition = {
         "0-5": 0,
         "5-10": 0,
@@ -319,20 +336,21 @@ const repartitionNoterClasseController = async(req, res)=> {
     try {
         const notes = await prisma.note.findMany({
             where : {
+                id_trimestre:Number(id_trimestre),
                 inscription : {
                     id_classe:Number(id)
                 }
             }
         })
-        if(!notes){
-            return res.status(404).json({message:'aucune notes'})
+        if (notes.length === 0) {
+            return res.status(200).json({ message: "Aucune note", repartitionNote:[] });
         }
-        notes.map(note=>{
-            if (note.valeur < 5) partition["0-5"]++
-            else if (note.valeur < 10) partition["5-10"]++
-            else if (note.valeur < 15) partition["10-15"]++
-            else partition["15-20"]++
-        })
+        notes.forEach(note => {
+            if (note.valeur < 5) partition["0-5"]++;
+            else if (note.valeur < 10) partition["5-10"]++;
+            else if (note.valeur < 15) partition["10-15"]++;
+            else partition["15-20"]++;
+        });
         const repartitionNote = [
             {range:"0-5", count:partition['0-5']},
             {range:"5-10", count:partition['5-10']},

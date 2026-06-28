@@ -155,7 +155,7 @@ model Note {
   inscription Inscription @relation(fields: [id_inscription], references: [id])
   matiere     Matiere     @relation(fields: [id_matiere], references: [id])
   trimestre   Trimestre   @relation(fields: [id_trimestre], references: [id_trimestre])
-
+  dateEvaluation DateTime @default(now())
   @@index([id_inscription])
   @@index([id_matiere])
   @@index([id_trimestre])

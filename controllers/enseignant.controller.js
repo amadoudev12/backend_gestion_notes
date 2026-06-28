@@ -211,11 +211,15 @@ const enseignantStatController = async (req,res)=>{
                 id_classe:{in: classeIds}
             }
         })
-        const nombreMatiere = await prisma.affectation.count({
+        const nombreMatiereAffecter = await prisma.affectation.findMany({
             where : {
                 id_prof: matricule
             }
         })
+        const nombreMatiereSansDoublon = nombreMatiereAffecter.filter((result, index, tableau)=> 
+                index === tableau.findIndex(c=> c.id_matiere === result.id_matiere)    
+        )
+        const nombreMatiere = nombreMatiereSansDoublon.length
         return res.status(201).json({message:"stat:", nombreClasse, nombreEleve, nombreMatiere})
     }catch(err){
         console.error(err)

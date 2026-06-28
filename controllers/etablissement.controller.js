@@ -8,6 +8,29 @@ const postEtablissement = async (req, res) => {
     }
     try {
         const {nom, adresse, phone, email, code, statut, directeur, admin_id} = body
+        const existEtablissement = await prisma.etablissement.findUnique({
+            where : {
+                admin_id:admin_id
+            }
+        })
+        if(existEtablissement){
+            await prisma.etablissement.update({
+                where : {
+                    id:existEtablissement.id
+                },
+                data : {
+                    nom:nom,
+                    adresse:adresse,
+                    phone:phone,
+                    email:email,
+                    code:code,
+                    statut:statut,
+                    directeur:directeur,
+                    admin_id:Number(admin_id)
+                }
+            })
+            return res.status(201).json({message:"etablissement modifié"})
+        }
         await prisma.etablissement.create({
             data : {
                 nom:nom,

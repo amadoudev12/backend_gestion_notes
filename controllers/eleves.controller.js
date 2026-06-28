@@ -44,6 +44,7 @@ const createEleveController = async (req, res) => {
             let eleve = await prisma.eleve.findUnique({
                 where: { matricule: row.matricule }
             });
+            console.log(eleve)
             if (!eleve) {
                 eleve = await prisma.eleve.create({
                     data: {
@@ -73,7 +74,7 @@ const createEleveController = async (req, res) => {
                     id_annee_academique: Number(annee.id)
                 }
             })
-            await sendEmail(eleve.nom, eleve.email, eleve.matricule, eleve.matricule)
+            // await sendEmail(eleve.nom, eleve.email, eleve.matricule, eleve.matricule)
         }
         return res.status(201).json({
             message: "les élèves ont été ajoutés avec succès ✅"

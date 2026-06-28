@@ -88,9 +88,25 @@ const actifTrimestreController = async (req, res) => {
         })
     }
 }
+
+const getTrimestreActive = async (req, res)=>{
+    try {
+        const trimestre = await prisma.trimestre.findFirst({
+            where:{actif:true}
+        })
+
+        return res.status(200).json({trimestreActive:trimestre})
+    }catch(err){
+        console.error(err)
+        res.status(500).json({
+            message: "Erreur BD"
+        })
+    }
+}
 module.exports = {
     postTrimestreController,
     getTrimestres,
     actifTrimestreController,
-    deleteTrimestre
+    deleteTrimestre,
+    getTrimestreActive
 }

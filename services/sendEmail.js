@@ -82,7 +82,7 @@ const sendEmail = async (nom, email, identifiant, motDePasse) => {
         })
     }catch(error){
         console.error("Erreur lors de l'envoi :", error);
-        throw error;
+        // throw error;
     }
 }
 module.exports = sendEmail
